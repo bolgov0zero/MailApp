@@ -467,7 +467,6 @@ ipcMain.handle('settings:checkUpdate', async () => {
   }
 });
 
-ipcMain.handle('settings:installUpdate', () => { autoUpdater.downloadUpdate(); });
 ipcMain.handle('settings:openExternal', (_, url) => { shell.openExternal(url); });
 ipcMain.on('settings:close', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
 ipcMain.on('main:openSettings', () => { openSettings(); });
@@ -492,17 +491,21 @@ ipcMain.on('main:notify', (_, { title, body, icon }) => {
 // --- Auto-updater ---
 
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false; // we handle restart ourselves
+autoUpdater.autoInstallOnAppQuit = false;
 
-autoUpdater.on('update-downloaded', () => {
+autoUpdater.on('download-progress', (progress) => {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.webContents.send('update:downloaded');
+    settingsWindow.webContents.send('update:progress', Math.floor(progress.percent));
   }
 });
 
-// Called from settings when user clicks "Установить"
-ipcMain.on('settings:quitAndInstall', () => {
-  autoUpdater.quitAndInstall(false, true); // isSilent=false, isForceRunAfter=true
+autoUpdater.on('update-downloaded', () => {
+  // Silent install + relaunch immediately after download
+  autoUpdater.quitAndInstall(true, true);
+});
+
+ipcMain.handle('settings:downloadAndInstall', () => {
+  autoUpdater.downloadUpdate();
 });
 
 // --- App lifecycle ---

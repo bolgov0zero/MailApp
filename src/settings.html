@@ -197,11 +197,10 @@
   <div class="section">
     <div class="section-title">Обновления</div>
     <div class="update-row">
-      <span class="update-status" id="updateStatus">Нажмите «Проверить» для поиска обновлений</span>
-      <button class="btn btn-secondary" id="btnCheck">Проверить</button>
-      <button class="btn btn-primary" id="btnInstall" style="display:none">Установить</button>
+      <span class="update-status" id="updateStatus">Нажмите «Обновить» для проверки</span>
+      <button class="btn btn-primary" id="btnUpdate">Обновить</button>
     </div>
-    <span class="hint">Обновления загружаются с GitHub Releases. После скачивания приложение перезапустится автоматически.</span>
+    <span class="hint">Проверяет наличие новой версии, скачивает и устанавливает автоматически. Приложение перезапустится.</span>
   </div>
 
   <div class="alert" id="saveAlert"></div>
@@ -281,49 +280,35 @@
 
   document.getElementById('btnCancel').addEventListener('click', () => api.close());
 
-  // Updates
-  let updateDownloaded = false;
-
-  document.getElementById('btnCheck').addEventListener('click', async () => {
-    const btn = document.getElementById('btnCheck');
+  // Updates — single button: check → download → silent install + restart
+  document.getElementById('btnUpdate').addEventListener('click', async () => {
+    const btn = document.getElementById('btnUpdate');
     const status = document.getElementById('updateStatus');
     btn.disabled = true;
     status.textContent = 'Проверяем...';
+
     const result = await api.checkUpdate();
-    btn.disabled = false;
     if (result.error) {
       status.textContent = 'Ошибка: ' + result.error;
-    } else if (result.available) {
-      status.textContent = 'Доступна версия ' + result.version + '. Нажмите «Скачать».';
-      document.getElementById('btnInstall').style.display = '';
-    } else {
+      btn.disabled = false;
+      return;
+    }
+    if (!result.available) {
       status.textContent = 'У вас актуальная версия.';
+      btn.disabled = false;
+      return;
     }
+
+    // Update found — start downloading
+    status.textContent = 'Скачивание... 0%';
+    api.downloadAndInstall();
+    // Progress comes from main process
   });
 
-  document.getElementById('btnInstall').addEventListener('click', () => {
-    const btn = document.getElementById('btnInstall');
-    const status = document.getElementById('updateStatus');
-    if (updateDownloaded) {
-      // Already downloaded — install and restart
-      status.textContent = 'Перезапуск...';
-      btn.disabled = true;
-      api.quitAndInstall();
-    } else {
-      status.textContent = 'Скачивание...';
-      btn.disabled = true;
-      api.installUpdate();
-    }
+  api.onUpdateProgress(pct => {
+    document.getElementById('updateStatus').textContent = 'Скачивание... ' + pct + '%';
   });
-
-  api.onUpdateDownloaded(() => {
-    updateDownloaded = true;
-    const btn = document.getElementById('btnInstall');
-    btn.textContent = 'Установить и перезапустить';
-    btn.disabled = false;
-    btn.style.display = '';
-    document.getElementById('updateStatus').textContent = 'Обновление скачано.';
-  });
+  // After download complete, main process calls quitAndInstall automatically — no UI needed
 
   function showAlert(type, msg) {
     const el = document.getElementById('saveAlert');
