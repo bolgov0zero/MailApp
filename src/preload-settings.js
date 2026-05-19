@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('mailappSettings', {
   onUpdateProgress: (cb)    => ipcRenderer.on('update:progress', (_, pct) => cb(pct)),
   openExternal:     (url)   => ipcRenderer.invoke('settings:openExternal', url),
   relogin:          ()      => ipcRenderer.invoke('settings:relogin'),
+  minimize:         ()      => ipcRenderer.send('settings:minimize'),
   close:            ()      => ipcRenderer.send('settings:close'),
   onUpdateDownloaded: (cb)  => ipcRenderer.on('update:downloaded', cb),
 });

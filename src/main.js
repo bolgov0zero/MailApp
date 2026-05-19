@@ -420,9 +420,12 @@ function openSettings() {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 520,
-    height: 560,
+    width: 480,
+    height: 600,
     resizable: false,
+    frame: false,
+    transparent: false,
+    backgroundColor: '#1a1a2e',
     title: 'Настройки MailApp',
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     parent: mainWindow,
@@ -527,7 +530,8 @@ ipcMain.handle('settings:checkUpdate', async () => {
 });
 
 ipcMain.handle('settings:openExternal', (_, url) => { shell.openExternal(url); });
-ipcMain.on('settings:close', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
+ipcMain.on('settings:close',    () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
+ipcMain.on('settings:minimize', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.minimize(); });;
 ipcMain.on('main:openSettings', () => { openSettings(); });
 
 // Unread badge from renderer

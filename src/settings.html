@@ -7,245 +7,422 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #1e1e2e;
-      color: #cdd6f4;
-      font-size: 14px;
+    :root {
+      --bg:        #0f0f1a;
+      --surface:   #16162a;
+      --surface2:  #1e1e35;
+      --border:    #2a2a45;
+      --border2:   #353560;
+      --accent:    #6c8ef5;
+      --accent2:   #8ba4ff;
+      --text:      #e0e0f0;
+      --text2:     #9090b8;
+      --text3:     #5a5a88;
+      --success:   #4ade80;
+      --error:     #f87171;
+      --radius:    10px;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
       user-select: none;
     }
 
-    .header {
-      padding: 20px 24px 14px;
-      border-bottom: 1px solid #313244;
+    /* ── Title bar ── */
+    .titlebar {
+      height: 44px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
-      gap: 10px;
+      padding: 0 16px;
+      -webkit-app-region: drag;
+      flex-shrink: 0;
     }
-    .header h1 { font-size: 16px; font-weight: 600; }
-    .header .version { font-size: 11px; color: #6c7086; margin-left: auto; }
-
-    .content { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
-
-    .section { display: flex; flex-direction: column; gap: 10px; }
-    .section-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #89b4fa;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #313244;
+    .titlebar-icon {
+      width: 26px; height: 26px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      margin-right: 10px;
+      flex-shrink: 0;
     }
-
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 12px; color: #a6adc8; }
-    .field input[type="text"],
-    .field input[type="password"] {
-      background: #313244;
-      border: 1px solid #45475a;
-      border-radius: 6px;
-      color: #cdd6f4;
-      padding: 7px 10px;
+    .titlebar-title {
       font-size: 13px;
-      outline: none;
-      transition: border-color 0.15s;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
     }
-    .field input:focus { border-color: #89b4fa; }
-    .field .hint { font-size: 11px; color: #6c7086; }
+    .titlebar-version {
+      font-size: 11px;
+      color: var(--text3);
+      margin-right: 12px;
+      line-height: 1.3;
+      text-align: right;
+    }
+    .titlebar-btns {
+      display: flex;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+    .titlebar-btn {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .titlebar-btn:hover { background: var(--border); color: var(--text); }
+    .titlebar-btn.close:hover { background: #f87171; color: #fff; }
 
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 44px);
+    }
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
+    }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Toggle ── */
     .toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 2px 0;
     }
-    .toggle-row span { font-size: 13px; }
-
-    .toggle {
-      width: 40px; height: 22px;
-      background: #45475a;
-      border-radius: 11px;
+    .toggle-label { font-size: 13px; color: var(--text); }
+    .toggle-wrap {
       position: relative;
+      width: 42px; height: 24px;
       cursor: pointer;
-      transition: background 0.2s;
       flex-shrink: 0;
     }
-    .toggle.on { background: #89b4fa; }
-    .toggle::after {
+    .toggle-wrap input { display: none; }
+    .toggle-track {
+      width: 42px; height: 24px;
+      background: var(--border2);
+      border-radius: 12px;
+      transition: background 0.2s;
+      position: relative;
+    }
+    .toggle-wrap input:checked + .toggle-track { background: var(--accent); }
+    .toggle-track::after {
       content: '';
       position: absolute;
       top: 3px; left: 3px;
-      width: 16px; height: 16px;
+      width: 18px; height: 18px;
       border-radius: 50%;
       background: #fff;
       transition: left 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
-    .toggle.on::after { left: 21px; }
+    .toggle-wrap input:checked + .toggle-track::after { left: 21px; }
 
+    /* ── Fields ── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field + .field { margin-top: 12px; }
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+      letter-spacing: 0.03em;
+    }
+
+    .input-wrap { position: relative; }
+    .input-wrap .input-icon {
+      position: absolute;
+      left: 11px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 9px 10px 9px 34px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,142,245,0.15);
+    }
+
+    /* custom select arrow */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '⌄';
+      position: absolute;
+      right: 11px; top: 50%;
+      transform: translateY(-55%);
+      font-size: 16px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+    .select-wrap select { padding-left: 34px; padding-right: 28px; cursor: pointer; }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.5;
+    }
+    .hint b { color: var(--text2); font-weight: 500; }
+
+    /* drive path preview tag */
+    .path-tag {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      color: var(--accent2);
+      margin-top: 4px;
+      min-height: 20px;
+    }
+
+    /* ── Update row ── */
     .update-row {
       display: flex;
       align-items: center;
       gap: 10px;
     }
-    .update-status { font-size: 12px; color: #a6adc8; flex: 1; }
+    .update-status {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text2);
+    }
 
+    /* ── Buttons ── */
     .btn {
       border: none;
-      border-radius: 6px;
-      padding: 7px 16px;
+      border-radius: 8px;
+      padding: 9px 18px;
       font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
-      font-weight: 500;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
     }
-    .btn:disabled { opacity: 0.5; cursor: default; }
-    .btn-primary { background: #89b4fa; color: #1e1e2e; }
-    .btn-secondary { background: #313244; color: #cdd6f4; }
-    .btn:not(:disabled):hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn:not(:disabled):active { transform: scale(0.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #7c6ff5);
+      color: #fff;
+    }
+    .btn-primary:not(:disabled):hover { opacity: 0.88; }
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+    .btn-ghost:not(:disabled):hover { border-color: var(--border2); color: var(--text); }
 
+    /* ── Footer ── */
     .footer {
-      padding: 14px 24px;
-      border-top: 1px solid #313244;
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    .alert {
-      font-size: 12px;
-      padding: 8px 12px;
-      border-radius: 6px;
-      display: none;
-    }
-    .alert.success { background: #1e3a2f; color: #a6e3a1; display: block; }
-    .alert.error   { background: #3a1e1e; color: #f38ba8; display: block; }
-
-    .drive-row {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 10px;
+      background: var(--surface);
+      flex-shrink: 0;
     }
-    .drive-row select {
-      background: #313244;
-      border: 1px solid #45475a;
-      border-radius: 6px;
-      color: #cdd6f4;
-      padding: 7px 10px;
-      font-size: 13px;
-      outline: none;
-      cursor: pointer;
-      transition: border-color 0.15s;
-      min-width: 140px;
-    }
-    .drive-row select:focus { border-color: #89b4fa; }
-    .drive-path-preview {
+    .footer .spacer { flex: 1; }
+
+    /* ── Alert ── */
+    .alert {
       font-size: 12px;
-      color: #6c7086;
-      font-family: monospace;
+      padding: 9px 13px;
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 12px;
     }
+    .alert.show { display: flex; }
+    .alert.success { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); color: var(--success); }
+    .alert.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--error); }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <span style="font-size:20px">⚙</span>
-  <h1>Настройки MailApp</h1>
-  <span class="version" id="appVersion" style="margin-left:auto;text-align:right;line-height:1.4"></span>
+<!-- Title bar -->
+<div class="titlebar">
+  <div class="titlebar-icon">✉</div>
+  <span class="titlebar-title">Настройки</span>
+  <span class="titlebar-version" id="appVersion"></span>
+  <div class="titlebar-btns">
+    <button class="titlebar-btn" id="btnMinimize" title="Свернуть">─</button>
+    <button class="titlebar-btn close" id="btnWinClose" title="Закрыть">✕</button>
+  </div>
 </div>
 
-<div class="content">
+<div class="layout">
+  <div class="scroll-area">
 
-  <!-- Auto-start -->
-  <div class="section">
-    <div class="section-title">Запуск</div>
-    <div class="toggle-row">
-      <span>Автозапуск при входе в систему</span>
-      <div class="toggle" id="toggleAutoLaunch"></div>
-    </div>
-  </div>
-
-  <!-- Auth data storage + auto-login -->
-  <div class="section">
-    <div class="section-title">Хранение данных авторизации</div>
-
-    <div class="field">
-      <label>Диск для хранения</label>
-      <div class="drive-row">
-        <select id="authDrive">
-          <option value="">Профиль пользователя (по умолчанию)</option>
-        </select>
-        <span class="drive-path-preview" id="drivePathPreview"></span>
+    <!-- Launch -->
+    <div class="card">
+      <div class="card-title">Запуск</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Автозапуск при входе в систему</span>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="chkAutoLaunch" />
+          <div class="toggle-track"></div>
+        </label>
       </div>
-      <span class="hint">Файл: <b>{диск}:\MailApp\{логин}.json</b>. Сетевой диск с одинаковой буквой на всех ПК — авто-вход на любом компьютере.</span>
     </div>
 
-    <!-- Account selector — shown when multiple files exist on selected drive -->
-    <div class="field" id="accountSelectorRow" style="display:none">
-      <label>Аккаунт</label>
-      <select id="accountSelect"></select>
+    <!-- Auth -->
+    <div class="card">
+      <div class="card-title">Авторизация</div>
+
+      <div class="field">
+        <label>Диск для хранения</label>
+        <div class="select-wrap input-wrap">
+          <span class="input-icon">💾</span>
+          <select id="authDrive">
+            <option value="">Профиль пользователя (по умолчанию)</option>
+          </select>
+        </div>
+        <div id="drivePathPreview" class="path-tag" style="display:none"></div>
+      </div>
+
+      <div class="field" id="accountSelectorRow" style="display:none">
+        <label>Аккаунт</label>
+        <div class="select-wrap input-wrap">
+          <span class="input-icon">👤</span>
+          <select id="accountSelect"></select>
+        </div>
+      </div>
+
+      <div class="field" id="authFields">
+        <label>Логин (email)</label>
+        <div class="input-wrap">
+          <span class="input-icon">@</span>
+          <input type="text" id="authLogin" placeholder="user@nebolit.ru" autocomplete="username" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Пароль</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <span class="hint">Хранится зашифрованным. Сетевой диск с одинаковой буквой — авто-вход на любом ПК.</span>
+      </div>
     </div>
 
-    <div class="field" id="authFields">
-      <label>Логин (email)</label>
-      <input type="text" id="authLogin" placeholder="user@nebolit.ru" autocomplete="username" />
+    <!-- Updates -->
+    <div class="card">
+      <div class="card-title">Обновления</div>
+      <div class="update-row">
+        <span class="update-status" id="updateStatus">Нажмите «Обновить» для проверки</span>
+        <button class="btn btn-primary" id="btnUpdate">Обновить</button>
+      </div>
     </div>
-    <div class="field">
-      <label>Пароль</label>
-      <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
-      <span class="hint" id="authHint">Данные хранятся зашифрованными. Если авторизация слетит — приложение войдёт автоматически.</span>
-    </div>
+
+    <!-- Alert -->
+    <div class="alert" id="saveAlert"></div>
+
+  </div><!-- /scroll-area -->
+
+  <div class="footer">
+    <button class="btn btn-ghost" id="btnCancel">Отмена</button>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="btnSave">Сохранить</button>
   </div>
-
-  <!-- Updates -->
-  <div class="section">
-    <div class="section-title">Обновления</div>
-    <div class="update-row">
-      <span class="update-status" id="updateStatus">Нажмите «Обновить» для проверки</span>
-      <button class="btn btn-primary" id="btnUpdate">Обновить</button>
-    </div>
-    <span class="hint">Проверяет наличие новой версии, скачивает и устанавливает автоматически. Приложение перезапустится.</span>
-  </div>
-
-  <div class="alert" id="saveAlert"></div>
-
-</div>
-
-<div class="footer">
-  <button class="btn btn-secondary" id="btnCancel">Отмена</button>
-  <button class="btn btn-primary" id="btnSave">Сохранить</button>
 </div>
 
 <script>
   const api = window.mailappSettings;
-  let autoLaunch = false;
   let currentLogin = '';
-  const driveSelect = document.getElementById('authDrive');
 
-  const accountSelect  = document.getElementById('accountSelect');
-  const accountRow     = document.getElementById('accountSelectorRow');
-  const loginInput     = document.getElementById('authLogin');
-  const passwordInput  = document.getElementById('authPassword');
+  const driveSelect   = document.getElementById('authDrive');
+  const accountSelect = document.getElementById('accountSelect');
+  const accountRow    = document.getElementById('accountSelectorRow');
+  const loginInput    = document.getElementById('authLogin');
+  const passwordInput = document.getElementById('authPassword');
+  const chkAutoLaunch = document.getElementById('chkAutoLaunch');
+
+  // Titlebar buttons
+  document.getElementById('btnMinimize').addEventListener('click', () => api.minimize());
+  document.getElementById('btnWinClose').addEventListener('click', () => api.close());
+  document.getElementById('btnCancel').addEventListener('click', () => api.close());
 
   function updateDrivePreview() {
     const val = driveSelect.value;
     const login = loginInput.value.trim();
     const filename = login ? login.split('@')[0] + '.json' : '{логин}.json';
-    document.getElementById('drivePathPreview').textContent =
-      val ? val + ':\\MailApp\\' + filename : '';
+    const el = document.getElementById('drivePathPreview');
+    if (val) {
+      el.textContent = val + ':\\MailApp\\' + filename;
+      el.style.display = 'inline-block';
+    } else {
+      el.style.display = 'none';
+    }
   }
-
-  function renderToggle() {
-    document.getElementById('toggleAutoLaunch').className = 'toggle' + (autoLaunch ? ' on' : '');
-  }
-
-  document.getElementById('toggleAutoLaunch').addEventListener('click', () => {
-    autoLaunch = !autoLaunch;
-    renderToggle();
-  });
 
   loginInput.addEventListener('input', updateDrivePreview);
 
-  // Load accounts from selected drive and update UI
   async function onDriveChange() {
     updateDrivePreview();
     const drive = driveSelect.value;
@@ -256,12 +433,8 @@
     loginInput.value = '';
     passwordInput.value = '';
 
-    if (files.length === 0) {
-      // No files — blank form for new entry
-      return;
-    }
+    if (files.length === 0) return;
 
-    // 1 or more accounts — always show selector so user can add new ones
     accountRow.style.display = '';
     files.forEach(f => {
       const opt = document.createElement('option');
@@ -285,7 +458,7 @@
       }
       updateDrivePreview();
     };
-    // Pre-select current active login, fallback to first
+
     const preferred = files.find(f => f.login === currentLogin) ? currentLogin : files[0].login;
     accountSelect.value = preferred;
     accountSelect.onchange();
@@ -293,12 +466,11 @@
 
   driveSelect.addEventListener('change', onDriveChange);
 
-  // Load app info, real drives and current settings in parallel
   Promise.all([api.getAppInfo(), api.getDrives(), api.load()])
     .then(([info, drives, { settings, auth }]) => {
       const v = info.version || '?';
       document.getElementById('appVersion').innerHTML =
-        'v' + v + '<br><span style="font-size:10px;color:#6c7086">© 2026 Nebolit MailApp</span>';
+        'v' + v + '<br><span style="font-size:10px;color:var(--text3)">© 2026 Nebolit</span>';
 
       drives.forEach(letter => {
         const opt = document.createElement('option');
@@ -307,14 +479,11 @@
         driveSelect.appendChild(opt);
       });
 
-      autoLaunch = !!settings.autoLaunch;
-      renderToggle();
+      chkAutoLaunch.checked = !!settings.autoLaunch;
       driveSelect.value = settings.authDrive || '';
       currentLogin = settings.authLogin || auth.login || '';
 
       updateDrivePreview();
-
-      // Trigger account list for current drive
       onDriveChange();
     });
 
@@ -322,15 +491,15 @@
     const login = loginInput.value.trim();
     const password = passwordInput.value;
     const { ok } = await api.save({
-      settings: { autoLaunch, authDrive: driveSelect.value },
+      settings: { autoLaunch: chkAutoLaunch.checked, authDrive: driveSelect.value },
       auth: { login, password },
     });
     updateDrivePreview();
     if (!ok) {
-      showAlert('error', 'Ошибка сохранения. Проверьте права на запись.');
+      showAlert('error', '✕  Ошибка сохранения. Проверьте права на запись.');
       return;
     }
-    showAlert('success', 'Настройки сохранены. Выполняется вход...');
+    showAlert('success', '✓  Настройки сохранены. Выполняется вход...');
     if (login && password) {
       setTimeout(async () => {
         await api.relogin();
@@ -339,9 +508,7 @@
     }
   });
 
-  document.getElementById('btnCancel').addEventListener('click', () => api.close());
-
-  // Updates — single button: check → download → silent install + restart
+  // Updates
   document.getElementById('btnUpdate').addEventListener('click', async () => {
     const btn = document.getElementById('btnUpdate');
     const status = document.getElementById('updateStatus');
@@ -360,22 +527,19 @@
       return;
     }
 
-    // Update found — start downloading
     status.textContent = 'Скачивание... 0%';
     api.downloadAndInstall();
-    // Progress comes from main process
   });
 
   api.onUpdateProgress(pct => {
     document.getElementById('updateStatus').textContent = 'Скачивание... ' + pct + '%';
   });
-  // After download complete, main process calls quitAndInstall automatically — no UI needed
 
   function showAlert(type, msg) {
     const el = document.getElementById('saveAlert');
-    el.className = 'alert ' + type;
+    el.className = 'alert show ' + type;
     el.textContent = msg;
-    setTimeout(() => el.className = 'alert', 3000);
+    setTimeout(() => { el.className = 'alert'; }, 3500);
   }
 </script>
 </body>
