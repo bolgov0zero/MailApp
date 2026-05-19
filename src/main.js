@@ -486,7 +486,6 @@ ipcMain.handle('settings:load', () => {
 ipcMain.handle('settings:save', async (_, { settings, auth }) => {
   const settingsOk = writeSettings({
     ...settings,
-    // Remember which login was last selected
     authLogin: auth.login || '',
   });
   const authOk = auth.login ? writeAuth(settings.authDrive || null, auth) : true;
@@ -496,6 +495,23 @@ ipcMain.handle('settings:save', async (_, { settings, auth }) => {
     if (!settings.autoLaunch && enabled) await autoLauncher.disable();
   } catch (e) {}
   return { ok: settingsOk && authOk };
+});
+
+ipcMain.handle('settings:relogin', async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  // Clear cookies for all mail.ru / vk.ru domains so session is dropped
+  const ses = mainWindow.webContents.session;
+  const cookies = await ses.cookies.get({});
+  const mailDomains = /mail\.ru|vk\.ru|mycdn\.me|mcs\.mail\.ru/i;
+  await Promise.all(
+    cookies
+      .filter(c => mailDomains.test(c.domain))
+      .map(c => {
+        const url = `https://${c.domain.replace(/^\./, '')}${c.path}`;
+        return ses.cookies.remove(url, c.name);
+      })
+  );
+  mainWindow.loadURL('https://e.mail.ru');
 });
 
 ipcMain.handle('settings:checkUpdate', async () => {

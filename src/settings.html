@@ -319,16 +319,24 @@
     });
 
   document.getElementById('btnSave').addEventListener('click', async () => {
+    const login = loginInput.value.trim();
+    const password = passwordInput.value;
     const { ok } = await api.save({
       settings: { autoLaunch, authDrive: driveSelect.value },
-      auth: {
-        login: loginInput.value.trim(),
-        password: passwordInput.value,
-      },
+      auth: { login, password },
     });
     updateDrivePreview();
-    showAlert(ok ? 'success' : 'error',
-      ok ? 'Настройки сохранены.' : 'Ошибка сохранения. Проверьте права на запись.');
+    if (!ok) {
+      showAlert('error', 'Ошибка сохранения. Проверьте права на запись.');
+      return;
+    }
+    showAlert('success', 'Настройки сохранены. Выполняется вход...');
+    if (login && password) {
+      setTimeout(async () => {
+        await api.relogin();
+        api.close();
+      }, 800);
+    }
   });
 
   document.getElementById('btnCancel').addEventListener('click', () => api.close());
