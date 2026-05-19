@@ -74,79 +74,73 @@ function writeAuth(settings, data) {
 // --- Auto-login injection ---
 
 function buildAutoLoginScript(login, password) {
-  // mail.ru has a two-step login: first enter username → click Next → then enter password
-  // login may be "user" or "user@mail.ru" — we split accordingly
+  // mail.ru login is served from id.vk.ru as a SPA.
+  // Step 1: input#email (username without @domain) → button[type=submit]
+  // Step 2 (SPA, no page reload): input[type=password] appears,
+  //         OR a "Войти с паролем" button appears first (push-login default) — click it,
+  //         then fill password → button[type=submit]
   return `
     (function() {
       const LOGIN = ${JSON.stringify(login)};
       const PASS  = ${JSON.stringify(password)};
-      let step = 'username';
+      let state = 'idle'; // idle → filling_user → waiting_pass → done
 
-      function setNativeValue(el, val) {
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        nativeInputValueSetter.call(el, val);
-        el.dispatchEvent(new Event('input', { bubbles: true }));
+      function setVal(el, val) {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        setter.call(el, val);
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
       }
 
-      function tryFill() {
-        // --- Step 1: username field ---
-        if (step === 'username') {
-          // mail.ru login input selectors (various possible)
-          const usernameInput = document.querySelector(
-            'input[data-testid="login-input"], ' +
-            'input[name="username"], ' +
-            'input[autocomplete="username"], ' +
-            'input[autocomplete="email"], ' +
-            'input[type="email"]:not([name="password"]), ' +
-            '.login-form input[type="text"]'
-          );
-          if (usernameInput && !usernameInput.dataset.mailappFilled) {
-            // Strip @domain if present — mail.ru login field wants only the mailbox name
+      function tick() {
+        if (state === 'done') return;
+
+        // Step 1 — fill username
+        if (state === 'idle') {
+          const emailInput = document.querySelector('input#email');
+          if (emailInput && !emailInput.dataset.mafilled) {
             const userPart = LOGIN.includes('@') ? LOGIN.split('@')[0] : LOGIN;
-            setNativeValue(usernameInput, userPart);
-            usernameInput.dataset.mailappFilled = '1';
-
-            // Click the submit / "Next" button
+            setVal(emailInput, userPart);
+            emailInput.dataset.mafilled = '1';
+            state = 'filling_user';
             setTimeout(() => {
-              const btn = document.querySelector(
-                'button[data-testid="login-to-mail-button"], ' +
-                'button[type="submit"], ' +
-                '.login-form button'
-              );
-              if (btn) { btn.click(); step = 'password'; }
-            }, 300);
+              const btn = document.querySelector('button[type=submit]');
+              if (btn) { btn.click(); state = 'waiting_pass'; }
+              else { state = 'idle'; } // retry
+            }, 400);
           }
         }
 
-        // --- Step 2: password field (appears after username step) ---
-        if (step === 'password') {
-          const passInput = document.querySelector(
-            'input[data-testid="password-input"], ' +
-            'input[name="password"], ' +
-            'input[autocomplete="current-password"], ' +
-            'input[type="password"]'
-          );
-          if (passInput && !passInput.dataset.mailappFilled) {
-            setNativeValue(passInput, PASS);
-            passInput.dataset.mailappFilled = '1';
+        // Step 2 — password field or "login with password" button
+        if (state === 'waiting_pass') {
+          const passInput = document.querySelector('input[type=password]');
+          if (passInput && !passInput.dataset.mafilled) {
+            setVal(passInput, PASS);
+            passInput.dataset.mafilled = '1';
+            state = 'done';
             setTimeout(() => {
-              const btn = document.querySelector(
-                'button[data-testid="login-to-mail-button"], ' +
-                'button[type="submit"], ' +
-                '.login-form button'
-              );
+              const btn = document.querySelector('button[type=submit]');
               if (btn) btn.click();
-            }, 300);
-            return; // done
+            }, 400);
+            return;
+          }
+
+          // Some accounts show a "Войти с паролем" link/button before the password field
+          const allBtns = Array.from(document.querySelectorAll('button, a'));
+          const passBtn = allBtns.find(el =>
+            /паролем|пароль|password/i.test(el.textContent) && !el.dataset.mafilled
+          );
+          if (passBtn) {
+            passBtn.dataset.mafilled = '1';
+            passBtn.click();
           }
         }
 
-        setTimeout(tryFill, 600);
+        setTimeout(tick, 700);
       }
 
-      // Start after a short delay to let React render the form
-      setTimeout(tryFill, 800);
+      // Start after initial render
+      setTimeout(tick, 1200);
     })();
   `;
 }
