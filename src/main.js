@@ -15,6 +15,7 @@ const autoLauncher = new AutoLaunch({ name: 'MailApp' });
 
 let mainWindow;
 let settingsWindow;
+let wasLoggedIn = false;
 
 // --- Settings helpers ---
 
@@ -368,14 +369,23 @@ function createMainWindow() {
     const isMailPage  = /e\.mail\.ru/i.test(currentUrl) && !isLoginPage;
 
     if (isLoginPage) {
-      const settings = readSettings();
-      const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
-      if (auth && auth.login && auth.password) {
-        mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
+      if (wasLoggedIn) {
+        // User manually logged out — remember and skip auto-login
+        writeSettings({ ...readSettings(), manualLogout: true });
+      } else {
+        const settings = readSettings();
+        if (!settings.manualLogout) {
+          const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
+          if (auth && auth.login && auth.password) {
+            mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
+          }
+        }
       }
+      wasLoggedIn = false;
     }
 
     if (isMailPage) {
+      wasLoggedIn = true;
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
     }
 
@@ -490,6 +500,7 @@ ipcMain.handle('settings:save', async (_, { settings, auth }) => {
   const settingsOk = writeSettings({
     ...settings,
     authLogin: auth.login || '',
+    manualLogout: false,  // clear on profile save so relogin works
   });
   const authOk = auth.login ? writeAuth(settings.authDrive || null, auth) : true;
   try {
