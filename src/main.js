@@ -171,6 +171,18 @@ function createMainWindow() {
 
   // Inject settings button overlay after page loads
   mainWindow.webContents.on('did-finish-load', () => {
+    const currentUrl = mainWindow.webContents.getURL();
+    const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
+
+    // Auto-login only on known login pages, never on security/settings pages
+    if (isLoginPage) {
+      const settings = readSettings();
+      const auth = readAuth(settings);
+      if (auth && auth.login && auth.password) {
+        mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
+      }
+    }
+
     mainWindow.webContents.executeJavaScript(`
       (function() {
         if (document.getElementById('__mailapp_settings_btn__')) return;
@@ -207,12 +219,6 @@ function createMainWindow() {
       })();
     `);
 
-    // Auto-login if credentials are saved
-    const settings = readSettings();
-    const auth = readAuth(settings);
-    if (auth && auth.login && auth.password) {
-      mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
-    }
   });
 
   // Keep button alive on SPA navigation
