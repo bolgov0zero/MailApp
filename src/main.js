@@ -368,6 +368,9 @@ function createMainWindow() {
     (details, callback) => {
       writeSettings({ ...readSettings(), manualLogout: true });
       callback({});
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('https://e.mail.ru');
+      }, 500);
     }
   );
 
@@ -413,6 +416,14 @@ function createMainWindow() {
         document.body.appendChild(btn);
       })();
     `);
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    return { action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, menuBarVisible: false } };
+  });
+
+  mainWindow.webContents.on('did-create-window', (win) => {
+    win.setMenuBarVisibility(false);
   });
 
   mainWindow.webContents.on('did-navigate-in-page', () => {
