@@ -15,8 +15,8 @@
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9",
-    "auto-launch": "^5.0.6"
+    "auto-launch": "^5.0.6",
+    "electron-updater": "^6.3.9"
   },
   "build": {
     "appId": "com.bolgov0zero.mailapp",
@@ -30,7 +30,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico"
