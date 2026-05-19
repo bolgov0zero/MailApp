@@ -353,13 +353,13 @@ function createMainWindow() {
   mainWindow.loadURL('https://e.mail.ru');
   mainWindow.setMenuBarVisibility(false);
 
-  // Allow mail.ru to show notifications via Electron's system notifications
-  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'notifications') {
-      callback(true); // grant, but we intercept in preload
-    } else {
-      callback(true);
-    }
+  // Grant notification + push permissions (needed for service worker push)
+  const ses = mainWindow.webContents.session;
+  ses.setPermissionRequestHandler((wc, permission, callback) => {
+    callback(true);
+  });
+  ses.setPermissionCheckHandler((wc, permission) => {
+    return true;
   });
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -420,8 +420,8 @@ function openSettings() {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 620,
-    height: 520,
+    width: 720,
+    height: 600,
     resizable: false,
     frame: false,
     transparent: true,

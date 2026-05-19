@@ -16,123 +16,105 @@
       user-select: none;
     }
 
-    /* ── Shell with rounded corners & shadow ── */
+    /* padding lets box-shadow render on all sides without clipping */
+    .shell-wrap {
+      width: 100%; height: 100%;
+      padding: 12px;
+      background: transparent;
+    }
+
     .shell {
       width: 100%; height: 100%;
       background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.2);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.15);
       display: flex;
       overflow: hidden;
     }
 
     /* ── Sidebar ── */
     .sidebar {
-      width: 170px;
+      width: 180px;
       flex-shrink: 0;
       background: #5c6bc0;
       display: flex;
       flex-direction: column;
-      padding: 0;
       -webkit-app-region: drag;
-      position: relative;
     }
 
     .sidebar-header {
-      padding: 22px 16px 20px;
-      -webkit-app-region: drag;
+      padding: 24px 16px 20px;
     }
     .app-icon {
-      width: 44px; height: 44px;
-      background: rgba(255,255,255,0.25);
-      backdrop-filter: blur(8px);
+      width: 48px; height: 48px;
       border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      overflow: hidden;
+      margin-bottom: 12px;
     }
-    .app-name {
-      font-size: 15px;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.2;
-    }
-    .app-version {
-      font-size: 11px;
-      color: rgba(255,255,255,0.65);
-      margin-top: 2px;
-    }
+    .app-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .app-name { font-size: 16px; font-weight: 700; color: #fff; }
+    .app-version { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 3px; }
 
-    /* nav tabs */
     .nav { flex: 1; padding: 4px 10px; -webkit-app-region: no-drag; }
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 9px;
-      padding: 9px 12px;
+      gap: 10px;
+      padding: 10px 12px;
       border-radius: 10px;
       cursor: pointer;
-      color: rgba(255,255,255,0.7);
+      color: rgba(255,255,255,0.65);
       font-size: 13px;
       font-weight: 500;
       transition: background 0.15s, color 0.15s;
       margin-bottom: 2px;
     }
     .nav-item:hover { background: rgba(255,255,255,0.15); color: #fff; }
-    .nav-item.active { background: rgba(255,255,255,0.22); color: #fff; }
-    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-item.active { background: rgba(255,255,255,0.2); color: #fff; }
+    .nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .nav-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* close button — top right of content */
-    .btn-close-win {
-      position: absolute;
-      top: 12px; right: 14px;
-      width: 28px; height: 28px;
-      border-radius: 8px;
-      border: none;
-      background: #eeeef8;
-      color: #8888aa;
-      font-size: 13px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s, color 0.15s;
-      -webkit-app-region: no-drag;
-      z-index: 10;
-    }
-    .btn-close-win:hover { background: #f87171; color: #fff; }
-
-    /* ── Content area ── */
+    /* ── Content ── */
     .content {
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: #f5f6fa;
+      background: #f4f5fb;
       overflow: hidden;
+      position: relative;
     }
+
+    .btn-close-win {
+      position: absolute;
+      top: 14px; right: 16px;
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      border: none;
+      background: #eeeef8;
+      color: #9999bb;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      -webkit-app-region: no-drag;
+      z-index: 100;
+      line-height: 1;
+    }
+    .btn-close-win:hover { background: #f87171; color: #fff; }
 
     .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
     .tab-panel.active { display: flex; }
 
-    .panel-header {
-      padding: 24px 24px 0;
-    }
-    .panel-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1a1a2e;
-    }
-    .panel-sub {
-      font-size: 12px;
-      color: #8888aa;
-      margin-top: 2px;
-    }
+    .panel-header { padding: 24px 28px 0; }
+    .panel-title { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .panel-sub { font-size: 12px; color: #9999bb; margin-top: 3px; }
 
     .panel-body {
       flex: 1;
       overflow-y: auto;
-      padding: 16px 24px;
+      padding: 18px 28px;
       scrollbar-width: thin;
-      scrollbar-color: #dde rgba(0,0,0,0);
+      scrollbar-color: #dde transparent;
     }
     .panel-body::-webkit-scrollbar { width: 4px; }
     .panel-body::-webkit-scrollbar-thumb { background: #dde; border-radius: 4px; }
@@ -140,9 +122,9 @@
     /* ── Cards ── */
     .card {
       background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
     .card-label {
@@ -150,23 +132,19 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #8888aa;
-      margin-bottom: 12px;
+      color: #aaaacc;
+      margin-bottom: 14px;
     }
 
     /* ── Toggle ── */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
     .toggle-row span { font-size: 13px; color: #2d2d4e; font-weight: 500; }
-    .toggle-wrap { position: relative; cursor: pointer; }
+    .toggle-wrap { position: relative; cursor: pointer; flex-shrink: 0; }
     .toggle-wrap input { display: none; }
     .toggle-track {
-      width: 42px; height: 24px;
+      width: 44px; height: 26px;
       background: #dde;
-      border-radius: 12px;
+      border-radius: 13px;
       transition: background 0.2s;
       position: relative;
     }
@@ -175,207 +153,253 @@
       content: '';
       position: absolute;
       top: 3px; left: 3px;
-      width: 18px; height: 18px;
+      width: 20px; height: 20px;
       border-radius: 50%;
       background: #fff;
       transition: left 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
     }
     .toggle-wrap input:checked + .toggle-track::after { left: 21px; }
 
     /* ── Fields ── */
-    .field { display: flex; flex-direction: column; gap: 5px; }
-    .field + .field { margin-top: 12px; }
-    .field label { font-size: 11px; font-weight: 600; color: #8888aa; letter-spacing: 0.03em; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field + .field { margin-top: 14px; }
+    .field > label { font-size: 11px; font-weight: 600; color: #aaaacc; letter-spacing: 0.03em; }
 
     .input-wrap { position: relative; }
     .input-icon {
       position: absolute;
-      left: 11px; top: 50%;
+      left: 12px; top: 50%;
       transform: translateY(-50%);
       font-size: 14px;
-      color: #aaa;
+      color: #bbb;
       pointer-events: none;
       line-height: 1;
     }
     input[type="text"],
-    input[type="password"],
-    select {
+    input[type="password"] {
       width: 100%;
-      background: #f5f6fa;
-      border: 1.5px solid #e8e8f0;
-      border-radius: 9px;
+      background: #f4f5fb;
+      border: 1.5px solid #e8e8f4;
+      border-radius: 10px;
       color: #1a1a2e;
-      padding: 9px 10px 9px 34px;
+      padding: 10px 12px 10px 36px;
       font-size: 13px;
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
-      appearance: none;
-      -webkit-appearance: none;
     }
-    input[type="text"]:focus,
-    input[type="password"]:focus,
-    select:focus {
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+    input:focus {
+      border-color: #5c6bc0;
+      box-shadow: 0 0 0 3px rgba(92,107,192,0.12);
       background: #fff;
     }
-    .select-wrap { position: relative; }
-    .select-wrap::after {
-      content: '⌄';
-      position: absolute;
-      right: 11px; top: 50%;
-      transform: translateY(-55%);
-      font-size: 16px;
-      color: #aaa;
-      pointer-events: none;
-    }
-    .select-wrap select { cursor: pointer; padding-right: 28px; }
 
-    .hint { font-size: 11px; color: #aaa; line-height: 1.5; }
+    /* ── Custom dropdown ── */
+    .custom-select { position: relative; }
+    .custom-select-trigger {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f4f5fb;
+      border: 1.5px solid #e8e8f4;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      min-height: 42px;
+    }
+    .custom-select-trigger:hover { border-color: #c8c8e8; }
+    .custom-select-trigger.open {
+      border-color: #5c6bc0;
+      box-shadow: 0 0 0 3px rgba(92,107,192,0.12);
+      background: #fff;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .custom-select-icon { color: #bbb; flex-shrink: 0; display: flex; align-items: center; }
+    .custom-select-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .custom-select-value { flex: 1; font-size: 13px; color: #1a1a2e; }
+    .custom-select-value.placeholder { color: #bbb; }
+    .custom-select-arrow {
+      width: 18px; height: 18px;
+      flex-shrink: 0;
+      color: #bbb;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s;
+    }
+    .custom-select-trigger.open .custom-select-arrow { transform: rotate(180deg); }
+    .custom-select-arrow svg { width: 14px; height: 14px; }
+
+    .custom-select-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #fff;
+      border: 1.5px solid #5c6bc0;
+      border-top: none;
+      border-bottom-left-radius: 10px;
+      border-bottom-right-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      z-index: 200;
+      overflow: hidden;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .custom-select-dropdown.open { display: block; }
+    .custom-select-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #2d2d4e;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .custom-select-option:hover { background: #f0f1fb; }
+    .custom-select-option.selected { background: #eef0fd; color: #5c6bc0; font-weight: 600; }
+    .custom-select-option .opt-icon { color: #bbb; flex-shrink: 0; display:flex; align-items:center; }
+    .custom-select-option .opt-icon svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* profile row with + button */
+    .profile-row { display: flex; gap: 8px; align-items: flex-start; }
+    .profile-row .custom-select { flex: 1; }
+    .btn-add-profile {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      border: 1.5px solid #e8e8f4;
+      background: #fff;
+      color: #5c6bc0;
+      font-size: 22px;
+      font-weight: 300;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .btn-add-profile:hover { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
+
+    .hint { font-size: 11px; color: #bbb; line-height: 1.6; }
 
     .path-tag {
       display: inline-block;
-      background: #f0f0ff;
-      border: 1px solid #e0e0ff;
+      background: #f0f1fb;
+      border: 1px solid #e0e0f4;
       border-radius: 6px;
-      padding: 3px 8px;
+      padding: 3px 9px;
       font-size: 11px;
       font-family: 'Cascadia Code', 'Fira Code', monospace;
-      color: #667eea;
+      color: #5c6bc0;
     }
 
-    /* ── Update panel ── */
+    /* ── Update ── */
     .update-card {
       background: #f0f1fb;
-      border: 1.5px solid #e0e0ff;
-      border-radius: 12px;
-      padding: 20px;
+      border: 1.5px solid #e0e0f4;
+      border-radius: 14px;
+      padding: 22px;
     }
-    .update-status {
-      font-size: 13px;
-      color: #5a5a88;
-      margin-bottom: 14px;
-      min-height: 20px;
-    }
+    .update-status { font-size: 13px; color: #5a5a88; margin-bottom: 16px; min-height: 20px; }
 
     /* ── Buttons ── */
     .btn {
       border: none;
-      border-radius: 9px;
-      padding: 9px 20px;
+      border-radius: 10px;
+      padding: 10px 22px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+      transition: opacity 0.15s, transform 0.1s;
       white-space: nowrap;
     }
     .btn:disabled { opacity: 0.4; cursor: default; }
     .btn:not(:disabled):active { transform: scale(0.97); }
-    .btn-primary {
-      background: #5c6bc0;
-      color: #fff;
-    }
+    .btn-primary { background: #5c6bc0; color: #fff; }
     .btn-primary:not(:disabled):hover { background: #4a5ab0; }
-    .btn-ghost {
-      background: #fff;
-      border: 1.5px solid #e8e8f0;
-      color: #8888aa;
-    }
+    .btn-ghost { background: #fff; border: 1.5px solid #e8e8f4; color: #9999bb; }
     .btn-ghost:not(:disabled):hover { border-color: #ccc; color: #555; }
 
     /* ── Footer ── */
     .panel-footer {
-      padding: 12px 24px;
+      padding: 14px 28px;
       border-top: 1px solid #eeeef8;
       display: flex;
       align-items: center;
       gap: 10px;
       background: #fff;
+      flex-shrink: 0;
     }
-    .panel-footer .spacer { flex: 1; }
+    .spacer { flex: 1; }
 
     /* ── Alert ── */
     .alert {
-      font-size: 12px;
-      padding: 9px 13px;
-      border-radius: 9px;
-      display: none;
-      align-items: center;
-      gap: 7px;
-      margin-bottom: 12px;
-      font-weight: 500;
+      font-size: 12px; font-weight: 500;
+      padding: 10px 14px;
+      border-radius: 10px;
+      display: none; align-items: center; gap: 7px;
+      margin-bottom: 14px;
     }
     .alert.show { display: flex; }
     .alert.success { background: #f0fff4; border: 1px solid #86efac; color: #16a34a; }
     .alert.error   { background: #fff5f5; border: 1px solid #fca5a5; color: #dc2626; }
 
-    .btn-add-profile {
-      width: 36px; height: 36px;
-      border-radius: 9px;
-      border: 1.5px solid #e8e8f0;
-      background: #fff;
-      color: #5c6bc0;
-      font-size: 20px;
-      font-weight: 400;
-      line-height: 1;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .btn-add-profile:hover { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
+    /* about block */
+    .about-row { display: flex; align-items: center; gap: 16px; }
+    .about-icon { width: 52px; height: 52px; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .about-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .about-name { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+    .about-ver  { font-size: 12px; color: #9999bb; margin-top: 3px; }
+    .about-copy { font-size: 11px; color: #ccc; margin-top: 2px; }
   </style>
 </head>
 <body>
+<div class="shell-wrap">
 <div class="shell">
 
-  <!-- ── Sidebar ── -->
+  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-header">
-      <div class="app-icon"><img src="../icon.png" style="width:28px;height:28px;border-radius:6px;object-fit:cover" /></div>
+      <div class="app-icon"><img src="../icon.png" /></div>
       <div class="app-name">MailApp</div>
       <div class="app-version" id="appVersion">загрузка...</div>
     </div>
-
     <div class="nav">
       <div class="nav-item active" data-tab="general">
-        <span class="nav-icon">⚙️</span> Основные
+        <span class="nav-icon"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M10.5 10.5l1.4 1.4M3.1 12.9l1.4-1.4M10.5 5.5l1.4-1.4"/></svg></span> Основные
       </div>
       <div class="nav-item" data-tab="profiles">
-        <span class="nav-icon">👤</span> Профили
+        <span class="nav-icon"><svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14s0-5 6-5 6 5 6 5"/></svg></span> Профили
       </div>
       <div class="nav-item" data-tab="updates">
-        <span class="nav-icon">🔄</span> Обновление
+        <span class="nav-icon"><svg viewBox="0 0 16 16"><polyline points="1,5 1,10 6,10"/><path d="M3.5 13.5A6.5 6.5 0 1 0 4.5 6"/></svg></span> Обновление
       </div>
     </div>
-
   </div>
 
-  <!-- ── Content ── -->
-  <div class="content" style="position:relative">
-    <button class="btn-close-win" id="btnWinClose" title="Закрыть">✕</button>
+  <!-- Content -->
+  <div class="content">
+    <button class="btn-close-win" id="btnWinClose">✕</button>
 
-    <!-- General tab -->
+    <!-- General -->
     <div class="tab-panel active" id="tab-general">
       <div class="panel-header">
         <div class="panel-title">Основные</div>
         <div class="panel-sub">Общие настройки приложения</div>
       </div>
       <div class="panel-body">
-
         <div class="card">
           <div class="card-label">О приложении</div>
-          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-            <div style="width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0"><img src="../icon.png" style="width:100%;height:100%;object-fit:cover" /></div>
+          <div class="about-row">
+            <div class="about-icon"><img src="../icon.png" /></div>
             <div>
-              <div style="font-size:15px;font-weight:700;color:#1a1a2e">MailApp</div>
-              <div style="font-size:12px;color:#8888aa;margin-top:2px" id="generalVersion">загрузка...</div>
-              <div style="font-size:11px;color:#bbb;margin-top:1px">© 2026 Nebolit. Все права защищены.</div>
+              <div class="about-name">MailApp</div>
+              <div class="about-ver" id="generalVersion">загрузка...</div>
+              <div class="about-copy">© 2026 Nebolit. Все права защищены.</div>
             </div>
           </div>
         </div>
-
         <div class="card">
           <div class="card-label">Запуск</div>
           <div class="toggle-row">
@@ -386,7 +410,6 @@
             </label>
           </div>
         </div>
-
       </div>
       <div class="panel-footer">
         <div class="spacer"></div>
@@ -394,7 +417,7 @@
       </div>
     </div>
 
-    <!-- Profiles tab -->
+    <!-- Profiles -->
     <div class="tab-panel" id="tab-profiles">
       <div class="panel-header">
         <div class="panel-title">Профили</div>
@@ -406,11 +429,18 @@
           <div class="card-label">Хранение данных</div>
           <div class="field">
             <label>Диск</label>
-            <div class="select-wrap input-wrap">
-              <span class="input-icon">💾</span>
-              <select id="authDrive">
-                <option value="">Профиль пользователя (по умолчанию)</option>
-              </select>
+            <!-- Custom drive select -->
+            <div class="custom-select" id="driveSelectWrap">
+              <div class="custom-select-trigger" id="driveTrigger">
+                <span class="custom-select-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="14" height="8" rx="2"/><line x1="1" y1="10" x2="15" y2="10"/><circle cx="12" cy="12.5" r="0.7" fill="currentColor"/></svg></span>
+                <span class="custom-select-value" id="driveValue">Профиль пользователя (по умолчанию)</span>
+                <span class="custom-select-arrow"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 7,10 12,4"/></svg></span>
+              </div>
+              <div class="custom-select-dropdown" id="driveDropdown">
+                <div class="custom-select-option selected" data-value="">
+                  <span class="opt-icon" id="driveDefaultIcon"></span> Профиль пользователя (по умолчанию)
+                </div>
+              </div>
             </div>
             <div id="drivePathPreview" class="path-tag" style="display:none"></div>
           </div>
@@ -421,12 +451,16 @@
 
           <div class="field" id="accountSelectorRow" style="display:none">
             <label>Профиль</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <div class="select-wrap input-wrap" style="flex:1">
-                <span class="input-icon">👤</span>
-                <select id="accountSelect"></select>
+            <div class="profile-row">
+              <div class="custom-select" id="accountSelectWrap">
+                <div class="custom-select-trigger" id="accountTrigger">
+                  <span class="custom-select-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5" r="3"/><path d="M2 14s0-5 6-5 6 5 6 5"/></svg></span>
+                  <span class="custom-select-value placeholder" id="accountValue">Выберите профиль</span>
+                  <span class="custom-select-arrow"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 7,10 12,4"/></svg></span>
+                </div>
+                <div class="custom-select-dropdown" id="accountDropdown"></div>
               </div>
-              <button class="btn-add-profile" id="btnAddProfile" title="Добавить профиль">+</button>
+              <button class="btn-add-profile" id="btnAddProfile" title="Новый профиль">+</button>
             </div>
           </div>
 
@@ -441,12 +475,12 @@
           <div class="field">
             <label>Пароль</label>
             <div class="input-wrap">
-              <span class="input-icon">🔑</span>
+              <span class="input-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg></span>
               <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
             </div>
           </div>
 
-          <div class="hint" style="margin-top:8px">Хранится зашифрованным (DPAPI). Сетевой диск с одинаковой буквой — авто-вход на любом ПК.</div>
+          <div class="hint" style="margin-top:10px">Хранится зашифрованным (DPAPI). Сетевой диск с одинаковой буквой — авто-вход на любом ПК.</div>
         </div>
 
         <div class="alert" id="saveAlert"></div>
@@ -459,7 +493,7 @@
       </div>
     </div>
 
-    <!-- Updates tab -->
+    <!-- Updates -->
     <div class="tab-panel" id="tab-updates">
       <div class="panel-header">
         <div class="panel-title">Обновление</div>
@@ -470,30 +504,165 @@
           <div class="update-status" id="updateStatus">Нажмите «Проверить», чтобы найти обновления</div>
           <button class="btn btn-primary" id="btnUpdate">Проверить обновления</button>
         </div>
-        <div class="hint" style="margin-top:10px; padding: 0 2px">
+        <div class="hint" style="margin-top:12px">
           Найденное обновление скачивается автоматически. После загрузки приложение перезапустится и установит новую версию.
         </div>
       </div>
       <div class="panel-footer">
         <div class="spacer"></div>
-        <div style="font-size:11px;color:#bbb" id="footerVersion"></div>
+        <div style="font-size:11px;color:#ccc" id="footerVersion"></div>
       </div>
     </div>
 
   </div><!-- /content -->
 </div><!-- /shell -->
+</div><!-- /shell-wrap -->
 
 <script>
   const api = window.mailappSettings;
   let currentLogin = '';
+  let currentDrive = '';
+  let accountOptions = [];
 
-  const driveSelect   = document.getElementById('authDrive');
-  const accountSelect = document.getElementById('accountSelect');
-  const accountRow    = document.getElementById('accountSelectorRow');
+  const IC = {
+    drive:   `<svg viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="8" rx="2"/><line x1="1" y1="10" x2="15" y2="10"/><circle cx="12" cy="12.5" r="0.7" fill="currentColor" stroke="none"/></svg>`,
+    person:  `<svg viewBox="0 0 16 16"><circle cx="8" cy="5" r="3"/><path d="M2 14s0-5 6-5 6 5 6 5"/></svg>`,
+  };
+
+  // Set static opt-icon for default drive option
+  document.getElementById('driveDefaultIcon').innerHTML = IC.drive;
+
   const loginInput    = document.getElementById('authLogin');
   const passwordInput = document.getElementById('authPassword');
+  const accountRow    = document.getElementById('accountSelectorRow');
 
-  // ── Tab switching ──
+  // ── Custom select helper ──
+  function createCustomSelect({ triggerId, dropdownId, valueId, options, selectedValue, onSelect }) {
+    const trigger  = document.getElementById(triggerId);
+    const dropdown = document.getElementById(dropdownId);
+    const valueEl  = document.getElementById(valueId);
+
+    function render(opts, sel) {
+      dropdown.innerHTML = '';
+      opts.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'custom-select-option' + (opt.value === sel ? ' selected' : '');
+        div.dataset.value = opt.value;
+        div.innerHTML = `<span class="opt-icon">${opt.icon || IC.drive}</span> ${opt.label}`;
+        div.addEventListener('click', () => {
+          select(opt.value, opt.label);
+          onSelect(opt.value);
+        });
+        dropdown.appendChild(div);
+      });
+    }
+
+    function select(val, label) {
+      valueEl.textContent = label;
+      valueEl.classList.remove('placeholder');
+      dropdown.querySelectorAll('.custom-select-option').forEach(o => {
+        o.classList.toggle('selected', o.dataset.value === val);
+      });
+      close();
+    }
+
+    function open()  { trigger.classList.add('open'); dropdown.classList.add('open'); }
+    function close() { trigger.classList.remove('open'); dropdown.classList.remove('open'); }
+    function toggle(){ trigger.classList.contains('open') ? close() : open(); }
+
+    trigger.addEventListener('click', toggle);
+    document.addEventListener('click', e => {
+      if (!trigger.contains(e.target) && !dropdown.contains(e.target)) close();
+    });
+
+    render(options, selectedValue);
+
+    return {
+      setOptions(opts, sel) { render(opts, sel); },
+      setValue(val, label) { select(val, label); },
+    };
+  }
+
+  // ── Drive select ──
+  let driveSelect = createCustomSelect({
+    triggerId: 'driveTrigger',
+    dropdownId: 'driveDropdown',
+    valueId: 'driveValue',
+    options: driveOptions,
+    selectedValue: '',
+    onSelect: val => { currentDrive = val; onDriveChange(); },
+  });
+
+  // ── Account select ──
+  let accountSelect = createCustomSelect({
+    triggerId: 'accountTrigger',
+    dropdownId: 'accountDropdown',
+    valueId: 'accountValue',
+    options: [],
+    selectedValue: '',
+    onSelect: async val => {
+      const auth = await api.loadAuthByLogin(currentDrive, val);
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+      updateDrivePreview();
+    },
+  });
+
+  // ── Add profile button ──
+  document.getElementById('btnAddProfile').addEventListener('click', () => {
+    document.getElementById('accountDropdown').querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+    document.getElementById('accountValue').textContent = 'Новый профиль';
+    document.getElementById('accountValue').classList.remove('placeholder');
+    loginInput.value = '';
+    passwordInput.value = '';
+    loginInput.focus();
+    updateDrivePreview();
+  });
+
+  function updateDrivePreview() {
+    const login = loginInput.value.trim();
+    const filename = login ? login.split('@')[0] + '.json' : '{логин}.json';
+    const el = document.getElementById('drivePathPreview');
+    if (currentDrive) {
+      el.textContent = currentDrive + ':\\MailApp\\' + filename;
+      el.style.display = 'inline-block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+  loginInput.addEventListener('input', updateDrivePreview);
+
+  async function onDriveChange() {
+    updateDrivePreview();
+    const files = await api.listAuthFiles(currentDrive);
+
+    loginInput.value = '';
+    passwordInput.value = '';
+    accountRow.style.display = 'none';
+
+    if (files.length === 0) return;
+
+    accountRow.style.display = '';
+    const opts = files.map(f => ({
+      value: f.login,
+      label: f.login + (f.hasPassword ? '' : ' (без пароля)'),
+      icon: IC.person,
+    }));
+    accountOptions = opts;
+
+    const preferred = files.find(f => f.login === currentLogin) ? currentLogin : files[0].login;
+    const prefOpt = opts.find(o => o.value === preferred);
+
+    accountSelect.setOptions(opts, preferred);
+    accountSelect.setValue(preferred, prefOpt ? prefOpt.label : preferred);
+
+    const auth = await api.loadAuthByLogin(currentDrive, preferred);
+    loginInput.value = auth.login || '';
+    passwordInput.value = auth.password || '';
+    updateDrivePreview();
+  }
+
+  // ── Tabs ──
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -507,64 +676,6 @@
   document.getElementById('btnWinClose').addEventListener('click', () => api.close());
   document.getElementById('btnCancel').addEventListener('click', () => api.close());
 
-  // ── Drive path preview ──
-  function updateDrivePreview() {
-    const val = driveSelect.value;
-    const login = loginInput.value.trim();
-    const filename = login ? login.split('@')[0] + '.json' : '{логин}.json';
-    const el = document.getElementById('drivePathPreview');
-    if (val) {
-      el.textContent = val + ':\\MailApp\\' + filename;
-      el.style.display = 'inline-block';
-    } else {
-      el.style.display = 'none';
-    }
-  }
-  loginInput.addEventListener('input', updateDrivePreview);
-
-  // ── Drive change ──
-  async function onDriveChange() {
-    updateDrivePreview();
-    const drive = driveSelect.value;
-    const files = await api.listAuthFiles(drive);
-
-    accountSelect.innerHTML = '';
-    accountRow.style.display = 'none';
-    loginInput.value = '';
-    passwordInput.value = '';
-
-    if (files.length === 0) return;
-
-    accountRow.style.display = '';
-    files.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f.login;
-      opt.textContent = f.login + (f.hasPassword ? '' : ' (без пароля)');
-      accountSelect.appendChild(opt);
-    });
-
-    accountSelect.onchange = async () => {
-      const auth = await api.loadAuthByLogin(drive, accountSelect.value);
-      loginInput.value = auth.login || '';
-      passwordInput.value = auth.password || '';
-      updateDrivePreview();
-    };
-
-    document.getElementById('btnAddProfile').onclick = () => {
-      accountSelect.selectedIndex = -1;
-      loginInput.value = '';
-      passwordInput.value = '';
-      loginInput.focus();
-      updateDrivePreview();
-    };
-
-    const preferred = files.find(f => f.login === currentLogin) ? currentLogin : files[0].login;
-    accountSelect.value = preferred;
-    accountSelect.onchange();
-  }
-
-  driveSelect.addEventListener('change', onDriveChange);
-
   // ── Init ──
   Promise.all([api.getAppInfo(), api.getDrives(), api.load()])
     .then(([info, drives, { settings, auth }]) => {
@@ -573,17 +684,18 @@
       document.getElementById('generalVersion').textContent = 'Версия ' + v;
       document.getElementById('footerVersion').textContent = 'MailApp v' + v + ' · © 2026 Nebolit';
 
-      drives.forEach(letter => {
-        const opt = document.createElement('option');
-        opt.value = letter;
-        opt.textContent = letter + ': (диск ' + letter + ':)';
-        driveSelect.appendChild(opt);
-      });
+      // Populate drive options
+      const allDriveOpts = [
+        { value: '', label: 'Профиль пользователя (по умолчанию)', icon: IC.drive },
+        ...drives.map(l => ({ value: l, label: l + ': (диск ' + l + ':)', icon: IC.drive })),
+      ];
+      currentDrive = settings.authDrive || '';
+      currentLogin = settings.authLogin || auth.login || '';
+      const selDrive = allDriveOpts.find(o => o.value === currentDrive);
+      driveSelect.setOptions(allDriveOpts, currentDrive);
+      if (selDrive) driveSelect.setValue(currentDrive, selDrive.label);
 
       document.getElementById('chkAutoLaunch').checked = !!settings.autoLaunch;
-      driveSelect.value = settings.authDrive || '';
-      currentLogin = settings.authLogin || auth.login || '';
-
       updateDrivePreview();
       onDriveChange();
     });
@@ -591,7 +703,7 @@
   // ── Save General ──
   document.getElementById('btnSaveGeneral').addEventListener('click', async () => {
     const { ok } = await api.save({
-      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: driveSelect.value },
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: currentDrive },
       auth: { login: loginInput.value.trim(), password: passwordInput.value },
     });
     if (ok) api.close();
@@ -602,20 +714,14 @@
     const login = loginInput.value.trim();
     const password = passwordInput.value;
     const { ok } = await api.save({
-      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: driveSelect.value },
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: currentDrive },
       auth: { login, password },
     });
     updateDrivePreview();
-    if (!ok) {
-      showAlert('error', 'Ошибка сохранения. Проверьте права на запись.');
-      return;
-    }
-    showAlert('success', 'Настройки сохранены. Выполняется вход...');
+    if (!ok) { showAlert('error', 'Ошибка сохранения. Проверьте права на запись.'); return; }
+    showAlert('success', 'Сохранено. Выполняется вход...');
     if (login && password) {
-      setTimeout(async () => {
-        await api.relogin();
-        api.close();
-      }, 800);
+      setTimeout(async () => { await api.relogin(); api.close(); }, 800);
     }
   });
 
@@ -630,17 +736,12 @@
     const result = await api.checkUpdate();
     if (result.error) {
       status.textContent = 'Ошибка: ' + result.error;
-      btn.disabled = false;
-      btn.textContent = 'Проверить обновления';
-      return;
+      btn.disabled = false; btn.textContent = 'Проверить обновления'; return;
     }
     if (!result.available) {
       status.textContent = 'У вас актуальная версия.';
-      btn.disabled = false;
-      btn.textContent = 'Проверить обновления';
-      return;
+      btn.disabled = false; btn.textContent = 'Проверить обновления'; return;
     }
-
     status.textContent = 'Скачивание... 0%';
     btn.textContent = 'Скачивание...';
     api.downloadAndInstall();
