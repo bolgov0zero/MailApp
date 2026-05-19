@@ -95,13 +95,26 @@ function buildAutoLoginScript(login, password) {
       function tick() {
         if (state === 'done') return;
 
-        // Step 1 — fill username
+        // --- Step 2 (account.mail.ru/login?skip_first_step=1) ---
+        // Password field is input[name="password"]; username already pre-filled via URL.
+        const passInput = document.querySelector('input[name="password"], input[type="password"]');
+        if (passInput && !passInput.dataset.mafilled) {
+          setVal(passInput, PASS);
+          passInput.dataset.mafilled = '1';
+          state = 'done';
+          setTimeout(() => {
+            // Click the "Войти" submit (not the first submit which is "Все проекты")
+            const btns = Array.from(document.querySelectorAll('button[type=submit]'));
+            const loginBtn = btns.find(b => /войти/i.test(b.textContent)) || btns[btns.length - 1];
+            if (loginBtn) loginBtn.click();
+          }, 400);
+          return;
+        }
+
+        // --- Step 1 (id.vk.ru) — fill email and click Next ---
         if (state === 'idle') {
           const emailInput = document.querySelector('input#email');
           if (emailInput && !emailInput.dataset.mafilled) {
-            // For standard @mail.ru accounts use only the mailbox name;
-            // for custom domains (e.g. @nebolit.ru) pass the full email —
-            // the form accepts it and hides the domain dropdown automatically.
             const MAIL_RU_DOMAINS = ['mail.ru','inbox.ru','list.ru','bk.ru'];
             const domain = LOGIN.includes('@') ? LOGIN.split('@')[1].toLowerCase() : '';
             const userPart = (!domain || MAIL_RU_DOMAINS.includes(domain))
@@ -109,44 +122,25 @@ function buildAutoLoginScript(login, password) {
               : LOGIN;
             setVal(emailInput, userPart);
             emailInput.dataset.mafilled = '1';
-            state = 'filling_user';
-            setTimeout(() => {
-              const btn = document.querySelector('button[type=submit]');
-              if (btn) { btn.click(); state = 'waiting_pass'; }
-              else { state = 'idle'; } // retry
-            }, 400);
-          }
-        }
-
-        // Step 2 — password field or "login with password" button
-        if (state === 'waiting_pass') {
-          const passInput = document.querySelector('input[type=password]');
-          if (passInput && !passInput.dataset.mafilled) {
-            setVal(passInput, PASS);
-            passInput.dataset.mafilled = '1';
-            state = 'done';
+            state = 'waiting_pass';
             setTimeout(() => {
               const btn = document.querySelector('button[type=submit]');
               if (btn) btn.click();
+              else state = 'idle';
             }, 400);
-            return;
           }
 
-          // Some accounts show a "Войти с паролем" link/button before the password field
+          // "Войти с паролем" button (push-login flow)
           const allBtns = Array.from(document.querySelectorAll('button, a'));
           const passBtn = allBtns.find(el =>
-            /паролем|пароль|password/i.test(el.textContent) && !el.dataset.mafilled
+            /паролем|пароль/i.test(el.textContent) && !el.dataset.mafilled
           );
-          if (passBtn) {
-            passBtn.dataset.mafilled = '1';
-            passBtn.click();
-          }
+          if (passBtn) { passBtn.dataset.mafilled = '1'; passBtn.click(); }
         }
 
         setTimeout(tick, 700);
       }
 
-      // Start after initial render
       setTimeout(tick, 1200);
     })();
   `;
