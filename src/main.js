@@ -539,6 +539,8 @@ ipcMain.on('main:setUnread', (_, count) => { setUnreadBadge(count); });
 
 // System notification forwarded from renderer (intercept mail.ru web notifications)
 ipcMain.on('main:notify', (_, { title, body, icon }) => {
+  const settings = readSettings();
+  if (!settings.notifications) return;
   if (!Notification.isSupported()) return;
   const n = new Notification({
     title: title || 'MailApp',
