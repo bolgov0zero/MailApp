@@ -371,6 +371,14 @@ function createMainWindow() {
   mainWindow.loadURL('https://e.mail.ru');
   mainWindow.setMenuBarVisibility(false);
 
+  // Cancel downloads triggered by auth redirect pages (not real user downloads)
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    const url = item.getURL();
+    if (/id\.vk\.ru|account\.mail\.ru|auth\.mail\.ru/i.test(url)) {
+      event.preventDefault();
+    }
+  });
+
   // Grant notification + push permissions (needed for service worker push)
   const ses = mainWindow.webContents.session;
   ses.setPermissionRequestHandler((wc, permission, callback) => {
