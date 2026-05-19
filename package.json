@@ -1,0 +1,47 @@
+{
+  "name": "mailapp",
+  "version": "1.0.0",
+  "description": "Mail.ru desktop client",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:publish": "electron-builder --win --x64 --publish always"
+  },
+  "author": "bolgov0zero",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9",
+    "auto-launch": "^5.0.6"
+  },
+  "build": {
+    "appId": "com.bolgov0zero.mailapp",
+    "productName": "MailApp",
+    "publish": {
+      "provider": "github",
+      "owner": "bolgov0zero",
+      "repo": "MailApp"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

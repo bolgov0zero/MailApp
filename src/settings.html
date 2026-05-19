@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline';" />
+  <title>Настройки MailApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .header {
+      padding: 20px 24px 14px;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header h1 { font-size: 16px; font-weight: 600; }
+    .header .version { font-size: 11px; color: #6c7086; margin-left: auto; }
+
+    .content { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    .section { display: flex; flex-direction: column; gap: 10px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #89b4fa;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #313244;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; color: #a6adc8; }
+    .field input[type="text"],
+    .field input[type="password"] {
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      color: #cdd6f4;
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: #89b4fa; }
+    .field .hint { font-size: 11px; color: #6c7086; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .toggle-row span { font-size: 13px; }
+
+    .toggle {
+      width: 40px; height: 22px;
+      background: #45475a;
+      border-radius: 11px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: #89b4fa; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 21px; }
+
+    .update-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .update-status { font-size: 12px; color: #a6adc8; flex: 1; }
+
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 7px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary { background: #89b4fa; color: #1e1e2e; }
+    .btn-secondary { background: #313244; color: #cdd6f4; }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+
+    .footer {
+      padding: 14px 24px;
+      border-top: 1px solid #313244;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .alert {
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: none;
+    }
+    .alert.success { background: #1e3a2f; color: #a6e3a1; display: block; }
+    .alert.error   { background: #3a1e1e; color: #f38ba8; display: block; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:20px">⚙</span>
+  <h1>Настройки MailApp</h1>
+  <span class="version" id="appVersion"></span>
+</div>
+
+<div class="content">
+
+  <!-- Auto-start -->
+  <div class="section">
+    <div class="section-title">Запуск</div>
+    <div class="toggle-row">
+      <span>Автозапуск при входе в систему</span>
+      <div class="toggle" id="toggleAutoLaunch"></div>
+    </div>
+  </div>
+
+  <!-- Auth data storage -->
+  <div class="section">
+    <div class="section-title">Хранение данных</div>
+    <div class="field">
+      <label>Путь для хранения данных авторизации</label>
+      <input type="text" id="authDataPath" placeholder="По умолчанию: папка данных приложения" />
+      <span class="hint">Можно указать сетевой диск или общую папку (\\\\server\\share\\mailapp). Настройка глобальная — для всех пользователей ПК.</span>
+    </div>
+  </div>
+
+  <!-- Auto-login -->
+  <div class="section">
+    <div class="section-title">Автовход</div>
+    <div class="field">
+      <label>Логин (email)</label>
+      <input type="text" id="authLogin" placeholder="user@mail.ru" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+      <span class="hint">Учётные данные сохраняются по указанному выше пути. Если авторизация слетит — приложение войдёт автоматически.</span>
+    </div>
+  </div>
+
+  <!-- Updates -->
+  <div class="section">
+    <div class="section-title">Обновления</div>
+    <div class="update-row">
+      <span class="update-status" id="updateStatus">Нажмите «Проверить» для поиска обновлений</span>
+      <button class="btn btn-secondary" id="btnCheck">Проверить</button>
+      <button class="btn btn-primary" id="btnInstall" style="display:none">Установить</button>
+    </div>
+    <span class="hint">Обновления загружаются с GitHub Releases. После скачивания приложение перезапустится автоматически.</span>
+  </div>
+
+  <div class="alert" id="saveAlert"></div>
+
+</div>
+
+<div class="footer">
+  <button class="btn btn-secondary" id="btnCancel">Отмена</button>
+  <button class="btn btn-primary" id="btnSave">Сохранить</button>
+</div>
+
+<script>
+  const api = window.mailappSettings;
+  let autoLaunch = false;
+
+  // Load current settings
+  api.load().then(({ settings, auth }) => {
+    document.getElementById('appVersion').textContent = 'v' + (window.process?.versions?.electron || '');
+    autoLaunch = !!settings.autoLaunch;
+    renderToggle();
+    document.getElementById('authDataPath').value = settings.authDataPath || '';
+    document.getElementById('authLogin').value = auth.login || '';
+    document.getElementById('authPassword').value = auth.password || '';
+  });
+
+  function renderToggle() {
+    const el = document.getElementById('toggleAutoLaunch');
+    el.className = 'toggle' + (autoLaunch ? ' on' : '');
+  }
+
+  document.getElementById('toggleAutoLaunch').addEventListener('click', () => {
+    autoLaunch = !autoLaunch;
+    renderToggle();
+  });
+
+  document.getElementById('btnSave').addEventListener('click', async () => {
+    const settings = {
+      autoLaunch,
+      authDataPath: document.getElementById('authDataPath').value.trim(),
+    };
+    const auth = {
+      login: document.getElementById('authLogin').value.trim(),
+      password: document.getElementById('authPassword').value,
+    };
+    const { ok } = await api.save({ settings, auth });
+    showAlert(ok ? 'success' : 'error', ok ? 'Настройки сохранены.' : 'Ошибка сохранения. Проверьте права на запись.');
+  });
+
+  document.getElementById('btnCancel').addEventListener('click', () => api.close());
+
+  // Updates
+  document.getElementById('btnCheck').addEventListener('click', async () => {
+    const btn = document.getElementById('btnCheck');
+    const status = document.getElementById('updateStatus');
+    btn.disabled = true;
+    status.textContent = 'Проверяем...';
+    const result = await api.checkUpdate();
+    btn.disabled = false;
+    if (result.error) {
+      status.textContent = 'Ошибка: ' + result.error;
+    } else if (result.available) {
+      status.textContent = 'Доступна версия ' + result.version;
+      document.getElementById('btnInstall').style.display = '';
+    } else {
+      status.textContent = 'У вас актуальная версия.';
+    }
+  });
+
+  document.getElementById('btnInstall').addEventListener('click', () => {
+    document.getElementById('updateStatus').textContent = 'Скачивание...';
+    document.getElementById('btnInstall').disabled = true;
+    api.installUpdate();
+  });
+
+  api.onUpdateDownloaded(() => {
+    document.getElementById('updateStatus').textContent = 'Обновление скачано. Приложение перезапустится.';
+  });
+
+  function showAlert(type, msg) {
+    const el = document.getElementById('saveAlert');
+    el.className = 'alert ' + type;
+    el.textContent = msg;
+    setTimeout(() => el.className = 'alert', 3000);
+  }
+</script>
+</body>
+</html>
