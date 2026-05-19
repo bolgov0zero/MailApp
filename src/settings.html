@@ -7,125 +7,151 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --bg:        #0f0f1a;
-      --surface:   #16162a;
-      --surface2:  #1e1e35;
-      --border:    #2a2a45;
-      --border2:   #353560;
-      --accent:    #6c8ef5;
-      --accent2:   #8ba4ff;
-      --text:      #e0e0f0;
-      --text2:     #9090b8;
-      --text3:     #5a5a88;
-      --success:   #4ade80;
-      --error:     #f87171;
-      --radius:    10px;
-    }
-
     html, body {
       width: 100%; height: 100%;
       overflow: hidden;
+      background: transparent;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
       font-size: 13px;
       user-select: none;
     }
 
-    /* ── Title bar ── */
-    .titlebar {
-      height: 44px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+    /* ── Shell with rounded corners & shadow ── */
+    .shell {
+      width: 100%; height: 100%;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.2);
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 170px;
+      flex-shrink: 0;
+      background: #5c6bc0;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      -webkit-app-region: drag;
+      position: relative;
+    }
+
+    .sidebar-header {
+      padding: 22px 16px 20px;
+      -webkit-app-region: drag;
+    }
+    .app-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.25);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .app-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .app-version {
+      font-size: 11px;
+      color: rgba(255,255,255,0.65);
+      margin-top: 2px;
+    }
+
+    /* nav tabs */
+    .nav { flex: 1; padding: 4px 10px; -webkit-app-region: no-drag; }
+    .nav-item {
       display: flex;
       align-items: center;
-      padding: 0 16px;
-      -webkit-app-region: drag;
-      flex-shrink: 0;
-    }
-    .titlebar-icon {
-      width: 26px; height: 26px;
-      background: linear-gradient(135deg, var(--accent), #a78bfa);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
-      margin-right: 10px;
-      flex-shrink: 0;
-    }
-    .titlebar-title {
+      gap: 9px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: rgba(255,255,255,0.7);
       font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      flex: 1;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      margin-bottom: 2px;
     }
-    .titlebar-version {
-      font-size: 11px;
-      color: var(--text3);
-      margin-right: 12px;
-      line-height: 1.3;
-      text-align: right;
-    }
-    .titlebar-btns {
-      display: flex;
-      gap: 6px;
-      -webkit-app-region: no-drag;
-    }
-    .titlebar-btn {
+    .nav-item:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .nav-item.active { background: rgba(255,255,255,0.22); color: #fff; }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* close button — top right of content */
+    .btn-close-win {
+      position: absolute;
+      top: 12px; right: 14px;
       width: 28px; height: 28px;
       border-radius: 8px;
       border: none;
-      background: transparent;
-      color: var(--text2);
-      font-size: 14px;
+      background: #eeeef8;
+      color: #8888aa;
+      font-size: 13px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s;
+      -webkit-app-region: no-drag;
+      z-index: 10;
     }
-    .titlebar-btn:hover { background: var(--border); color: var(--text); }
-    .titlebar-btn.close:hover { background: #f87171; color: #fff; }
+    .btn-close-win:hover { background: #f87171; color: #fff; }
 
-    /* ── Layout ── */
-    .layout {
+    /* ── Content area ── */
+    .content {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 44px);
+      background: #f5f6fa;
+      overflow: hidden;
     }
-    .scroll-area {
+
+    .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; }
+
+    .panel-header {
+      padding: 24px 24px 0;
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .panel-sub {
+      font-size: 12px;
+      color: #8888aa;
+      margin-top: 2px;
+    }
+
+    .panel-body {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 20px 0;
+      padding: 16px 24px;
       scrollbar-width: thin;
-      scrollbar-color: var(--border2) transparent;
+      scrollbar-color: #dde rgba(0,0,0,0);
     }
-    .scroll-area::-webkit-scrollbar { width: 4px; }
-    .scroll-area::-webkit-scrollbar-track { background: transparent; }
-    .scroll-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-thumb { background: #dde; border-radius: 4px; }
 
     /* ── Cards ── */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: #fff;
+      border-radius: 12px;
       padding: 16px;
       margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
-    .card-title {
+    .card-label {
       font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--accent);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .card-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
+      color: #8888aa;
+      margin-bottom: 12px;
     }
 
     /* ── Toggle ── */
@@ -133,24 +159,18 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 2px 0;
     }
-    .toggle-label { font-size: 13px; color: var(--text); }
-    .toggle-wrap {
-      position: relative;
-      width: 42px; height: 24px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
+    .toggle-row span { font-size: 13px; color: #2d2d4e; font-weight: 500; }
+    .toggle-wrap { position: relative; cursor: pointer; }
     .toggle-wrap input { display: none; }
     .toggle-track {
       width: 42px; height: 24px;
-      background: var(--border2);
+      background: #dde;
       border-radius: 12px;
       transition: background 0.2s;
       position: relative;
     }
-    .toggle-wrap input:checked + .toggle-track { background: var(--accent); }
+    .toggle-wrap input:checked + .toggle-track { background: #5c6bc0; }
     .toggle-track::after {
       content: '';
       position: absolute;
@@ -159,37 +179,33 @@
       border-radius: 50%;
       background: #fff;
       transition: left 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     }
     .toggle-wrap input:checked + .toggle-track::after { left: 21px; }
 
     /* ── Fields ── */
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field + .field { margin-top: 12px; }
-    .field label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text2);
-      letter-spacing: 0.03em;
-    }
+    .field label { font-size: 11px; font-weight: 600; color: #8888aa; letter-spacing: 0.03em; }
 
     .input-wrap { position: relative; }
-    .input-wrap .input-icon {
+    .input-icon {
       position: absolute;
       left: 11px; top: 50%;
       transform: translateY(-50%);
       font-size: 14px;
-      color: var(--text3);
+      color: #aaa;
       pointer-events: none;
+      line-height: 1;
     }
     input[type="text"],
     input[type="password"],
     select {
       width: 100%;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
+      background: #f5f6fa;
+      border: 1.5px solid #e8e8f0;
+      border-radius: 9px;
+      color: #1a1a2e;
       padding: 9px 10px 9px 34px;
       font-size: 13px;
       outline: none;
@@ -200,11 +216,10 @@
     input[type="text"]:focus,
     input[type="password"]:focus,
     select:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(108,142,245,0.15);
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102,126,234,0.12);
+      background: #fff;
     }
-
-    /* custom select arrow */
     .select-wrap { position: relative; }
     .select-wrap::after {
       content: '⌄';
@@ -212,185 +227,261 @@
       right: 11px; top: 50%;
       transform: translateY(-55%);
       font-size: 16px;
-      color: var(--text3);
+      color: #aaa;
       pointer-events: none;
     }
-    .select-wrap select { padding-left: 34px; padding-right: 28px; cursor: pointer; }
+    .select-wrap select { cursor: pointer; padding-right: 28px; }
 
-    .hint {
-      font-size: 11px;
-      color: var(--text3);
-      line-height: 1.5;
-    }
-    .hint b { color: var(--text2); font-weight: 500; }
+    .hint { font-size: 11px; color: #aaa; line-height: 1.5; }
 
-    /* drive path preview tag */
     .path-tag {
       display: inline-block;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 2px 7px;
+      background: #f0f0ff;
+      border: 1px solid #e0e0ff;
+      border-radius: 6px;
+      padding: 3px 8px;
       font-size: 11px;
       font-family: 'Cascadia Code', 'Fira Code', monospace;
-      color: var(--accent2);
-      margin-top: 4px;
-      min-height: 20px;
+      color: #667eea;
     }
 
-    /* ── Update row ── */
-    .update-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    /* ── Update panel ── */
+    .update-card {
+      background: #f0f1fb;
+      border: 1.5px solid #e0e0ff;
+      border-radius: 12px;
+      padding: 20px;
     }
     .update-status {
-      flex: 1;
-      font-size: 12px;
-      color: var(--text2);
+      font-size: 13px;
+      color: #5a5a88;
+      margin-bottom: 14px;
+      min-height: 20px;
     }
 
     /* ── Buttons ── */
     .btn {
       border: none;
-      border-radius: 8px;
-      padding: 9px 18px;
+      border-radius: 9px;
+      padding: 9px 20px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s;
+      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
       white-space: nowrap;
     }
     .btn:disabled { opacity: 0.4; cursor: default; }
     .btn:not(:disabled):active { transform: scale(0.97); }
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #7c6ff5);
+      background: #5c6bc0;
       color: #fff;
     }
-    .btn-primary:not(:disabled):hover { opacity: 0.88; }
+    .btn-primary:not(:disabled):hover { background: #4a5ab0; }
     .btn-ghost {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text2);
+      background: #fff;
+      border: 1.5px solid #e8e8f0;
+      color: #8888aa;
     }
-    .btn-ghost:not(:disabled):hover { border-color: var(--border2); color: var(--text); }
+    .btn-ghost:not(:disabled):hover { border-color: #ccc; color: #555; }
 
     /* ── Footer ── */
-    .footer {
-      padding: 14px 20px;
-      border-top: 1px solid var(--border);
+    .panel-footer {
+      padding: 12px 24px;
+      border-top: 1px solid #eeeef8;
       display: flex;
       align-items: center;
       gap: 10px;
-      background: var(--surface);
-      flex-shrink: 0;
+      background: #fff;
     }
-    .footer .spacer { flex: 1; }
+    .panel-footer .spacer { flex: 1; }
 
     /* ── Alert ── */
     .alert {
       font-size: 12px;
       padding: 9px 13px;
-      border-radius: 8px;
+      border-radius: 9px;
       display: none;
       align-items: center;
       gap: 7px;
       margin-bottom: 12px;
+      font-weight: 500;
     }
     .alert.show { display: flex; }
-    .alert.success { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); color: var(--success); }
-    .alert.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: var(--error); }
+    .alert.success { background: #f0fff4; border: 1px solid #86efac; color: #16a34a; }
+    .alert.error   { background: #fff5f5; border: 1px solid #fca5a5; color: #dc2626; }
+
+    .btn-add-profile {
+      width: 36px; height: 36px;
+      border-radius: 9px;
+      border: 1.5px solid #e8e8f0;
+      background: #fff;
+      color: #5c6bc0;
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-add-profile:hover { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
   </style>
 </head>
 <body>
+<div class="shell">
 
-<!-- Title bar -->
-<div class="titlebar">
-  <div class="titlebar-icon">✉</div>
-  <span class="titlebar-title">Настройки</span>
-  <span class="titlebar-version" id="appVersion"></span>
-  <div class="titlebar-btns">
-    <button class="titlebar-btn" id="btnMinimize" title="Свернуть">─</button>
-    <button class="titlebar-btn close" id="btnWinClose" title="Закрыть">✕</button>
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="app-icon"><img src="../icon.png" style="width:28px;height:28px;border-radius:6px;object-fit:cover" /></div>
+      <div class="app-name">MailApp</div>
+      <div class="app-version" id="appVersion">загрузка...</div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item active" data-tab="general">
+        <span class="nav-icon">⚙️</span> Основные
+      </div>
+      <div class="nav-item" data-tab="profiles">
+        <span class="nav-icon">👤</span> Профили
+      </div>
+      <div class="nav-item" data-tab="updates">
+        <span class="nav-icon">🔄</span> Обновление
+      </div>
+    </div>
+
   </div>
-</div>
 
-<div class="layout">
-  <div class="scroll-area">
+  <!-- ── Content ── -->
+  <div class="content" style="position:relative">
+    <button class="btn-close-win" id="btnWinClose" title="Закрыть">✕</button>
 
-    <!-- Launch -->
-    <div class="card">
-      <div class="card-title">Запуск</div>
-      <div class="toggle-row">
-        <span class="toggle-label">Автозапуск при входе в систему</span>
-        <label class="toggle-wrap">
-          <input type="checkbox" id="chkAutoLaunch" />
-          <div class="toggle-track"></div>
-        </label>
+    <!-- General tab -->
+    <div class="tab-panel active" id="tab-general">
+      <div class="panel-header">
+        <div class="panel-title">Основные</div>
+        <div class="panel-sub">Общие настройки приложения</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="card">
+          <div class="card-label">О приложении</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+            <div style="width:48px;height:48px;border-radius:14px;overflow:hidden;flex-shrink:0"><img src="../icon.png" style="width:100%;height:100%;object-fit:cover" /></div>
+            <div>
+              <div style="font-size:15px;font-weight:700;color:#1a1a2e">MailApp</div>
+              <div style="font-size:12px;color:#8888aa;margin-top:2px" id="generalVersion">загрузка...</div>
+              <div style="font-size:11px;color:#bbb;margin-top:1px">© 2026 Nebolit. Все права защищены.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Запуск</div>
+          <div class="toggle-row">
+            <span>Автозапуск при входе в Windows</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="chkAutoLaunch" />
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="panel-footer">
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="btnSaveGeneral">Сохранить</button>
       </div>
     </div>
 
-    <!-- Auth -->
-    <div class="card">
-      <div class="card-title">Авторизация</div>
-
-      <div class="field">
-        <label>Диск для хранения</label>
-        <div class="select-wrap input-wrap">
-          <span class="input-icon">💾</span>
-          <select id="authDrive">
-            <option value="">Профиль пользователя (по умолчанию)</option>
-          </select>
-        </div>
-        <div id="drivePathPreview" class="path-tag" style="display:none"></div>
+    <!-- Profiles tab -->
+    <div class="tab-panel" id="tab-profiles">
+      <div class="panel-header">
+        <div class="panel-title">Профили</div>
+        <div class="panel-sub">Учётные данные и настройки входа</div>
       </div>
+      <div class="panel-body">
 
-      <div class="field" id="accountSelectorRow" style="display:none">
-        <label>Аккаунт</label>
-        <div class="select-wrap input-wrap">
-          <span class="input-icon">👤</span>
-          <select id="accountSelect"></select>
+        <div class="card">
+          <div class="card-label">Хранение данных</div>
+          <div class="field">
+            <label>Диск</label>
+            <div class="select-wrap input-wrap">
+              <span class="input-icon">💾</span>
+              <select id="authDrive">
+                <option value="">Профиль пользователя (по умолчанию)</option>
+              </select>
+            </div>
+            <div id="drivePathPreview" class="path-tag" style="display:none"></div>
+          </div>
         </div>
+
+        <div class="card">
+          <div class="card-label">Аккаунт</div>
+
+          <div class="field" id="accountSelectorRow" style="display:none">
+            <label>Профиль</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="select-wrap input-wrap" style="flex:1">
+                <span class="input-icon">👤</span>
+                <select id="accountSelect"></select>
+              </div>
+              <button class="btn-add-profile" id="btnAddProfile" title="Добавить профиль">+</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Email</label>
+            <div class="input-wrap">
+              <span class="input-icon">@</span>
+              <input type="text" id="authLogin" placeholder="user@nebolit.ru" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Пароль</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+          </div>
+
+          <div class="hint" style="margin-top:8px">Хранится зашифрованным (DPAPI). Сетевой диск с одинаковой буквой — авто-вход на любом ПК.</div>
+        </div>
+
+        <div class="alert" id="saveAlert"></div>
+
       </div>
-
-      <div class="field" id="authFields">
-        <label>Логин (email)</label>
-        <div class="input-wrap">
-          <span class="input-icon">@</span>
-          <input type="text" id="authLogin" placeholder="user@nebolit.ru" autocomplete="username" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Пароль</label>
-        <div class="input-wrap">
-          <span class="input-icon">🔑</span>
-          <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-        <span class="hint">Хранится зашифрованным. Сетевой диск с одинаковой буквой — авто-вход на любом ПК.</span>
+      <div class="panel-footer">
+        <button class="btn btn-ghost" id="btnCancel">Отмена</button>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="btnSave">Сохранить</button>
       </div>
     </div>
 
-    <!-- Updates -->
-    <div class="card">
-      <div class="card-title">Обновления</div>
-      <div class="update-row">
-        <span class="update-status" id="updateStatus">Нажмите «Обновить» для проверки</span>
-        <button class="btn btn-primary" id="btnUpdate">Обновить</button>
+    <!-- Updates tab -->
+    <div class="tab-panel" id="tab-updates">
+      <div class="panel-header">
+        <div class="panel-title">Обновление</div>
+        <div class="panel-sub">Проверка и установка новых версий</div>
+      </div>
+      <div class="panel-body">
+        <div class="update-card">
+          <div class="update-status" id="updateStatus">Нажмите «Проверить», чтобы найти обновления</div>
+          <button class="btn btn-primary" id="btnUpdate">Проверить обновления</button>
+        </div>
+        <div class="hint" style="margin-top:10px; padding: 0 2px">
+          Найденное обновление скачивается автоматически. После загрузки приложение перезапустится и установит новую версию.
+        </div>
+      </div>
+      <div class="panel-footer">
+        <div class="spacer"></div>
+        <div style="font-size:11px;color:#bbb" id="footerVersion"></div>
       </div>
     </div>
 
-    <!-- Alert -->
-    <div class="alert" id="saveAlert"></div>
-
-  </div><!-- /scroll-area -->
-
-  <div class="footer">
-    <button class="btn btn-ghost" id="btnCancel">Отмена</button>
-    <div class="spacer"></div>
-    <button class="btn btn-primary" id="btnSave">Сохранить</button>
-  </div>
-</div>
+  </div><!-- /content -->
+</div><!-- /shell -->
 
 <script>
   const api = window.mailappSettings;
@@ -401,13 +492,22 @@
   const accountRow    = document.getElementById('accountSelectorRow');
   const loginInput    = document.getElementById('authLogin');
   const passwordInput = document.getElementById('authPassword');
-  const chkAutoLaunch = document.getElementById('chkAutoLaunch');
 
-  // Titlebar buttons
-  document.getElementById('btnMinimize').addEventListener('click', () => api.minimize());
+  // ── Tab switching ──
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('tab-' + item.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Window controls ──
   document.getElementById('btnWinClose').addEventListener('click', () => api.close());
   document.getElementById('btnCancel').addEventListener('click', () => api.close());
 
+  // ── Drive path preview ──
   function updateDrivePreview() {
     const val = driveSelect.value;
     const login = loginInput.value.trim();
@@ -420,9 +520,9 @@
       el.style.display = 'none';
     }
   }
-
   loginInput.addEventListener('input', updateDrivePreview);
 
+  // ── Drive change ──
   async function onDriveChange() {
     updateDrivePreview();
     const drive = driveSelect.value;
@@ -442,20 +542,19 @@
       opt.textContent = f.login + (f.hasPassword ? '' : ' (без пароля)');
       accountSelect.appendChild(opt);
     });
-    const newOpt = document.createElement('option');
-    newOpt.value = '__new__';
-    newOpt.textContent = '+ Новая запись';
-    accountSelect.appendChild(newOpt);
 
     accountSelect.onchange = async () => {
-      if (accountSelect.value === '__new__') {
-        loginInput.value = '';
-        passwordInput.value = '';
-      } else {
-        const auth = await api.loadAuthByLogin(drive, accountSelect.value);
-        loginInput.value = auth.login || '';
-        passwordInput.value = auth.password || '';
-      }
+      const auth = await api.loadAuthByLogin(drive, accountSelect.value);
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+      updateDrivePreview();
+    };
+
+    document.getElementById('btnAddProfile').onclick = () => {
+      accountSelect.selectedIndex = -1;
+      loginInput.value = '';
+      passwordInput.value = '';
+      loginInput.focus();
       updateDrivePreview();
     };
 
@@ -466,11 +565,13 @@
 
   driveSelect.addEventListener('change', onDriveChange);
 
+  // ── Init ──
   Promise.all([api.getAppInfo(), api.getDrives(), api.load()])
     .then(([info, drives, { settings, auth }]) => {
       const v = info.version || '?';
-      document.getElementById('appVersion').innerHTML =
-        'v' + v + '<br><span style="font-size:10px;color:var(--text3)">© 2026 Nebolit</span>';
+      document.getElementById('appVersion').textContent = 'v' + v + ' · © 2026 Nebolit';
+      document.getElementById('generalVersion').textContent = 'Версия ' + v;
+      document.getElementById('footerVersion').textContent = 'MailApp v' + v + ' · © 2026 Nebolit';
 
       drives.forEach(letter => {
         const opt = document.createElement('option');
@@ -479,7 +580,7 @@
         driveSelect.appendChild(opt);
       });
 
-      chkAutoLaunch.checked = !!settings.autoLaunch;
+      document.getElementById('chkAutoLaunch').checked = !!settings.autoLaunch;
       driveSelect.value = settings.authDrive || '';
       currentLogin = settings.authLogin || auth.login || '';
 
@@ -487,19 +588,29 @@
       onDriveChange();
     });
 
+  // ── Save General ──
+  document.getElementById('btnSaveGeneral').addEventListener('click', async () => {
+    const { ok } = await api.save({
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: driveSelect.value },
+      auth: { login: loginInput.value.trim(), password: passwordInput.value },
+    });
+    if (ok) api.close();
+  });
+
+  // ── Save Profiles ──
   document.getElementById('btnSave').addEventListener('click', async () => {
     const login = loginInput.value.trim();
     const password = passwordInput.value;
     const { ok } = await api.save({
-      settings: { autoLaunch: chkAutoLaunch.checked, authDrive: driveSelect.value },
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: driveSelect.value },
       auth: { login, password },
     });
     updateDrivePreview();
     if (!ok) {
-      showAlert('error', '✕  Ошибка сохранения. Проверьте права на запись.');
+      showAlert('error', 'Ошибка сохранения. Проверьте права на запись.');
       return;
     }
-    showAlert('success', '✓  Настройки сохранены. Выполняется вход...');
+    showAlert('success', 'Настройки сохранены. Выполняется вход...');
     if (login && password) {
       setTimeout(async () => {
         await api.relogin();
@@ -508,31 +619,36 @@
     }
   });
 
-  // Updates
+  // ── Updates ──
   document.getElementById('btnUpdate').addEventListener('click', async () => {
     const btn = document.getElementById('btnUpdate');
     const status = document.getElementById('updateStatus');
     btn.disabled = true;
-    status.textContent = 'Проверяем...';
+    btn.textContent = 'Проверяем...';
+    status.textContent = '';
 
     const result = await api.checkUpdate();
     if (result.error) {
       status.textContent = 'Ошибка: ' + result.error;
       btn.disabled = false;
+      btn.textContent = 'Проверить обновления';
       return;
     }
     if (!result.available) {
       status.textContent = 'У вас актуальная версия.';
       btn.disabled = false;
+      btn.textContent = 'Проверить обновления';
       return;
     }
 
     status.textContent = 'Скачивание... 0%';
+    btn.textContent = 'Скачивание...';
     api.downloadAndInstall();
   });
 
   api.onUpdateProgress(pct => {
     document.getElementById('updateStatus').textContent = 'Скачивание... ' + pct + '%';
+    document.getElementById('btnUpdate').textContent = pct + '%';
   });
 
   function showAlert(type, msg) {

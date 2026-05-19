@@ -420,12 +420,12 @@ function openSettings() {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 480,
-    height: 600,
+    width: 620,
+    height: 520,
     resizable: false,
     frame: false,
-    transparent: false,
-    backgroundColor: '#1a1a2e',
+    transparent: true,
+    backgroundColor: '#00000000',
     title: 'Настройки MailApp',
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     parent: mainWindow,
