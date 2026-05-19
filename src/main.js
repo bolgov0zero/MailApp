@@ -99,7 +99,14 @@ function buildAutoLoginScript(login, password) {
         if (state === 'idle') {
           const emailInput = document.querySelector('input#email');
           if (emailInput && !emailInput.dataset.mafilled) {
-            const userPart = LOGIN.includes('@') ? LOGIN.split('@')[0] : LOGIN;
+            // For standard @mail.ru accounts use only the mailbox name;
+            // for custom domains (e.g. @nebolit.ru) pass the full email —
+            // the form accepts it and hides the domain dropdown automatically.
+            const MAIL_RU_DOMAINS = ['mail.ru','inbox.ru','list.ru','bk.ru'];
+            const domain = LOGIN.includes('@') ? LOGIN.split('@')[1].toLowerCase() : '';
+            const userPart = (!domain || MAIL_RU_DOMAINS.includes(domain))
+              ? LOGIN.split('@')[0]
+              : LOGIN;
             setVal(emailInput, userPart);
             emailInput.dataset.mafilled = '1';
             state = 'filling_user';
