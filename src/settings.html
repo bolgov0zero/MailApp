@@ -260,27 +260,18 @@
       return;
     }
 
-    if (files.length === 1) {
-      // Auto-load single account
-      const auth = await api.loadAuthByLogin(drive, files[0].login);
-      loginInput.value = auth.login || '';
-      passwordInput.value = auth.password || '';
-      updateDrivePreview();
-      return;
-    }
-
-    // Multiple accounts — show selector
+    // 1 or more accounts — always show selector so user can add new ones
     accountRow.style.display = '';
-    const newOpt = document.createElement('option');
-    newOpt.value = '__new__';
-    newOpt.textContent = '+ Новая запись';
-    accountSelect.appendChild(newOpt);
     files.forEach(f => {
       const opt = document.createElement('option');
       opt.value = f.login;
       opt.textContent = f.login + (f.hasPassword ? '' : ' (без пароля)');
       accountSelect.appendChild(opt);
     });
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__';
+    newOpt.textContent = '+ Новая запись';
+    accountSelect.appendChild(newOpt);
 
     accountSelect.onchange = async () => {
       if (accountSelect.value === '__new__') {
