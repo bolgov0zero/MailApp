@@ -15,7 +15,7 @@ const autoLauncher = new AutoLaunch({ name: 'MailApp' });
 
 let mainWindow;
 let settingsWindow;
-let wasLoggedIn = false;
+let manualLogoutPending = false;
 
 // --- Settings helpers ---
 
@@ -363,14 +363,22 @@ function createMainWindow() {
     return true;
   });
 
+  // Detect manual logout via navigation to logout URL
+  mainWindow.webContents.on('will-navigate', (_, url) => {
+    if (/logout|signout/i.test(url)) {
+      manualLogoutPending = true;
+    }
+  });
+
   mainWindow.webContents.on('did-finish-load', () => {
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
     const isMailPage  = /e\.mail\.ru/i.test(currentUrl) && !isLoginPage;
 
     if (isLoginPage) {
-      if (wasLoggedIn) {
-        // User manually logged out — remember and skip auto-login
+      if (manualLogoutPending) {
+        // User clicked logout — remember and skip auto-login
+        manualLogoutPending = false;
         writeSettings({ ...readSettings(), manualLogout: true });
       } else {
         const settings = readSettings();
@@ -381,11 +389,9 @@ function createMainWindow() {
           }
         }
       }
-      wasLoggedIn = false;
     }
 
     if (isMailPage) {
-      wasLoggedIn = true;
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
     }
 
@@ -513,6 +519,7 @@ ipcMain.handle('settings:save', async (_, { settings, auth }) => {
 
 ipcMain.handle('settings:relogin', async () => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
+  manualLogoutPending = false;
   // Clear cookies for all mail.ru / vk.ru domains so session is dropped
   const ses = mainWindow.webContents.session;
   const cookies = await ses.cookies.get({});
