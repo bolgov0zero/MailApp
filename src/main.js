@@ -501,7 +501,10 @@ ipcMain.handle('settings:save', async (_, { settings, auth }) => {
 ipcMain.handle('settings:checkUpdate', async () => {
   try {
     const result = await autoUpdater.checkForUpdates();
-    return { available: !!result?.updateInfo, version: result?.updateInfo?.version };
+    const latest = result?.updateInfo?.version;
+    const current = app.getVersion();
+    const available = !!latest && latest !== current;
+    return { available, version: latest };
   } catch (e) {
     return { error: e.message };
   }
