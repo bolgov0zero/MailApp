@@ -410,6 +410,29 @@ function openSettings() {
 
 // --- IPC handlers ---
 
+ipcMain.handle('settings:getAppInfo', () => {
+  return { version: app.getVersion() };
+});
+
+// Returns drive letters that actually exist on this Windows machine
+ipcMain.handle('settings:getDrives', () => {
+  if (process.platform !== 'win32') {
+    // On non-Windows return fake drives for dev/testing
+    return ['C', 'D'];
+  }
+  const { execSync } = require('child_process');
+  try {
+    // wmic logicaldisk get name returns lines like "C:\n", "D:\n" etc.
+    const out = execSync('wmic logicaldisk get name', { encoding: 'utf8', timeout: 3000 });
+    return out.split('\n')
+      .map(l => l.trim().replace(':', ''))
+      .filter(l => /^[A-Z]$/i.test(l))
+      .map(l => l.toUpperCase());
+  } catch (e) {
+    return [];
+  }
+});
+
 ipcMain.handle('settings:loadAuthFromDrive', (_, drive) => {
   const auth = readAuth(drive ? { authDrive: drive } : {});
   return auth ? { login: auth.login, password: auth.password } : { login: '', password: '' };
@@ -469,11 +492,17 @@ ipcMain.on('main:notify', (_, { title, body, icon }) => {
 // --- Auto-updater ---
 
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false; // we handle restart ourselves
+
 autoUpdater.on('update-downloaded', () => {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.webContents.send('update:downloaded');
   }
+});
+
+// Called from settings when user clicks "Установить"
+ipcMain.on('settings:quitAndInstall', () => {
+  autoUpdater.quitAndInstall(false, true); // isSilent=false, isForceRunAfter=true
 });
 
 // --- App lifecycle ---

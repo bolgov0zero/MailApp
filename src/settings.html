@@ -150,7 +150,7 @@
 <div class="header">
   <span style="font-size:20px">⚙</span>
   <h1>Настройки MailApp</h1>
-  <span class="version" id="appVersion"></span>
+  <span class="version" id="appVersion" style="margin-left:auto;text-align:right;line-height:1.4"></span>
 </div>
 
 <div class="content">
@@ -216,32 +216,49 @@
 <script>
   const api = window.mailappSettings;
   let autoLaunch = false;
-
-  // Populate drive letters C–Z
   const driveSelect = document.getElementById('authDrive');
-  for (let c = 67; c <= 90; c++) {
-    const opt = document.createElement('option');
-    opt.value = String.fromCharCode(c);
-    opt.textContent = String.fromCharCode(c) + ': (диск ' + String.fromCharCode(c) + ':)';
-    driveSelect.appendChild(opt);
-  }
 
   function updateDrivePreview() {
     const val = driveSelect.value;
     document.getElementById('drivePathPreview').textContent = val ? val + ':\\MailApp\\auth.json' : '';
   }
+
   driveSelect.addEventListener('change', () => {
     updateDrivePreview();
-    // Load credentials from the selected drive immediately
     api.loadAuthFromDrive(driveSelect.value).then(auth => {
       document.getElementById('authLogin').value = auth.login || '';
       document.getElementById('authPassword').value = auth.password || '';
     });
   });
 
-  // Load current settings
-  api.load().then(({ settings, auth }) => {
-    document.getElementById('appVersion').textContent = 'v' + (window.process?.versions?.electron || '');
+  function renderToggle() {
+    document.getElementById('toggleAutoLaunch').className = 'toggle' + (autoLaunch ? ' on' : '');
+  }
+
+  document.getElementById('toggleAutoLaunch').addEventListener('click', () => {
+    autoLaunch = !autoLaunch;
+    renderToggle();
+  });
+
+  // Load app info, real drives and current settings in parallel
+  Promise.all([
+    api.getAppInfo(),
+    api.getDrives(),
+    api.load(),
+  ]).then(([info, drives, { settings, auth }]) => {
+    // Version + copyright in header
+    const v = info.version || '?';
+    document.getElementById('appVersion').innerHTML =
+      'v' + v + '<br><span style="font-size:10px;color:#6c7086">© 2026 Nebolit MailApp</span>';
+
+    // Populate only real drives
+    drives.forEach(letter => {
+      const opt = document.createElement('option');
+      opt.value = letter;
+      opt.textContent = letter + ': (диск ' + letter + ':)';
+      driveSelect.appendChild(opt);
+    });
+
     autoLaunch = !!settings.autoLaunch;
     renderToggle();
     driveSelect.value = settings.authDrive || '';
@@ -250,32 +267,23 @@
     document.getElementById('authPassword').value = auth.password || '';
   });
 
-  function renderToggle() {
-    const el = document.getElementById('toggleAutoLaunch');
-    el.className = 'toggle' + (autoLaunch ? ' on' : '');
-  }
-
-  document.getElementById('toggleAutoLaunch').addEventListener('click', () => {
-    autoLaunch = !autoLaunch;
-    renderToggle();
-  });
-
   document.getElementById('btnSave').addEventListener('click', async () => {
-    const settings = {
-      autoLaunch,
-      authDrive: driveSelect.value,
-    };
-    const auth = {
-      login: document.getElementById('authLogin').value.trim(),
-      password: document.getElementById('authPassword').value,
-    };
-    const { ok } = await api.save({ settings, auth });
-    showAlert(ok ? 'success' : 'error', ok ? 'Настройки сохранены.' : 'Ошибка сохранения. Проверьте права на запись.');
+    const { ok } = await api.save({
+      settings: { autoLaunch, authDrive: driveSelect.value },
+      auth: {
+        login: document.getElementById('authLogin').value.trim(),
+        password: document.getElementById('authPassword').value,
+      },
+    });
+    showAlert(ok ? 'success' : 'error',
+      ok ? 'Настройки сохранены.' : 'Ошибка сохранения. Проверьте права на запись.');
   });
 
   document.getElementById('btnCancel').addEventListener('click', () => api.close());
 
   // Updates
+  let updateDownloaded = false;
+
   document.getElementById('btnCheck').addEventListener('click', async () => {
     const btn = document.getElementById('btnCheck');
     const status = document.getElementById('updateStatus');
@@ -286,7 +294,7 @@
     if (result.error) {
       status.textContent = 'Ошибка: ' + result.error;
     } else if (result.available) {
-      status.textContent = 'Доступна версия ' + result.version;
+      status.textContent = 'Доступна версия ' + result.version + '. Нажмите «Скачать».';
       document.getElementById('btnInstall').style.display = '';
     } else {
       status.textContent = 'У вас актуальная версия.';
@@ -294,13 +302,27 @@
   });
 
   document.getElementById('btnInstall').addEventListener('click', () => {
-    document.getElementById('updateStatus').textContent = 'Скачивание...';
-    document.getElementById('btnInstall').disabled = true;
-    api.installUpdate();
+    const btn = document.getElementById('btnInstall');
+    const status = document.getElementById('updateStatus');
+    if (updateDownloaded) {
+      // Already downloaded — install and restart
+      status.textContent = 'Перезапуск...';
+      btn.disabled = true;
+      api.quitAndInstall();
+    } else {
+      status.textContent = 'Скачивание...';
+      btn.disabled = true;
+      api.installUpdate();
+    }
   });
 
   api.onUpdateDownloaded(() => {
-    document.getElementById('updateStatus').textContent = 'Обновление скачано. Приложение перезапустится.';
+    updateDownloaded = true;
+    const btn = document.getElementById('btnInstall');
+    btn.textContent = 'Установить и перезапустить';
+    btn.disabled = false;
+    btn.style.display = '';
+    document.getElementById('updateStatus').textContent = 'Обновление скачано.';
   });
 
   function showAlert(type, msg) {
