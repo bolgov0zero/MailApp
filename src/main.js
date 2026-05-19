@@ -470,21 +470,10 @@ ipcMain.handle('settings:getAppInfo', () => {
 
 // Returns drive letters that actually exist on this Windows machine
 ipcMain.handle('settings:getDrives', () => {
-  if (process.platform !== 'win32') {
-    // On non-Windows return fake drives for dev/testing
-    return ['C', 'D'];
-  }
-  const { execSync } = require('child_process');
-  try {
-    // wmic logicaldisk get name returns lines like "C:\n", "D:\n" etc.
-    const out = execSync('wmic logicaldisk get name', { encoding: 'utf8', timeout: 3000 });
-    return out.split('\n')
-      .map(l => l.trim().replace(':', ''))
-      .filter(l => /^[A-Z]$/i.test(l))
-      .map(l => l.toUpperCase());
-  } catch (e) {
-    return [];
-  }
+  if (process.platform !== 'win32') return ['C', 'D'];
+  return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => {
+    try { fs.accessSync(l + ':\\'); return true; } catch { return false; }
+  });
 });
 
 // List auth files on a drive → [{filename, login, hasPassword}]
