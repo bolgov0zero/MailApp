@@ -35,8 +35,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico",
-      "rcedit": true
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
