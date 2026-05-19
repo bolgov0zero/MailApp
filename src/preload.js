@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('__mailapp_ipc__', {
   openSettings: () => ipcRenderer.send('main:openSettings'),
   setUnread:    (count) => ipcRenderer.send('main:setUnread', count),
+  notify:       (data)  => ipcRenderer.send('main:notify', data),
 });
 
 // Intercept web Notification API — forward to Electron system notifications

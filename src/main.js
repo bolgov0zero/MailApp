@@ -324,6 +324,13 @@ const UNREAD_POLLER = `
     setInterval(() => {
       const count = getCount();
       if (count !== last) {
+        if (last !== -1 && count > last) {
+          const diff = count - last;
+          window.__mailapp_ipc__.notify({
+            title: 'MailApp',
+            body: diff === 1 ? 'Новое письмо' : 'Новых писем: ' + diff,
+          });
+        }
         last = count;
         window.__mailapp_ipc__.setUnread(count);
       }
