@@ -5,10 +5,10 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// Global settings file — stored in system-wide location accessible by all users
+// Global settings — system-wide on Windows (all users), user-local elsewhere
 const GLOBAL_SETTINGS_PATH = process.platform === 'win32'
   ? path.join('C:\\ProgramData', 'MailApp', 'settings.json')
-  : path.join('/etc', 'mailapp', 'settings.json');
+  : path.join(os.homedir(), '.mailapp', 'settings.json');
 
 const autoLauncher = new AutoLaunch({ name: 'MailApp' });
 
