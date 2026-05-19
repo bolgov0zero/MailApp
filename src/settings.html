@@ -230,7 +230,14 @@
     const val = driveSelect.value;
     document.getElementById('drivePathPreview').textContent = val ? val + ':\\MailApp\\auth.json' : '';
   }
-  driveSelect.addEventListener('change', updateDrivePreview);
+  driveSelect.addEventListener('change', () => {
+    updateDrivePreview();
+    // Load credentials from the selected drive immediately
+    api.loadAuthFromDrive(driveSelect.value).then(auth => {
+      document.getElementById('authLogin').value = auth.login || '';
+      document.getElementById('authPassword').value = auth.password || '';
+    });
+  });
 
   // Load current settings
   api.load().then(({ settings, auth }) => {

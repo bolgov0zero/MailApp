@@ -264,6 +264,14 @@ function openSettings() {
 
 // --- IPC handlers ---
 
+ipcMain.handle('settings:loadAuthFromDrive', (_, drive) => {
+  const fakePath = drive
+    ? { authDrive: drive }
+    : {};
+  const auth = readAuth(fakePath);
+  return auth ? { login: auth.login, password: auth.password } : { login: '', password: '' };
+});
+
 ipcMain.handle('settings:load', () => {
   const settings = readSettings();
   const auth = readAuth(settings);
