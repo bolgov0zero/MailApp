@@ -1,4 +1,5 @@
 node_modules/
+# package-lock.json is committed for reproducible CI builds
 dist/
 out/
 *.log
