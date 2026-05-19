@@ -44,8 +44,10 @@ function writeSettings(data) {
 // --- Auth data helpers ---
 
 function getAuthFilePath(settings) {
-  const base = settings.authDataPath || os.homedir();
-  return path.join(base, '.mailapp', 'auth.json');
+  if (settings.authDrive) {
+    return path.join(settings.authDrive + ':\\MailApp', 'auth.json');
+  }
+  return path.join(os.homedir(), '.mailapp', 'auth.json');
 }
 
 function readAuth(settings) {

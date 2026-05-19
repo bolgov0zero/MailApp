@@ -119,6 +119,30 @@
     }
     .alert.success { background: #1e3a2f; color: #a6e3a1; display: block; }
     .alert.error   { background: #3a1e1e; color: #f38ba8; display: block; }
+
+    .drive-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .drive-row select {
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      color: #cdd6f4;
+      padding: 7px 10px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      min-width: 140px;
+    }
+    .drive-row select:focus { border-color: #89b4fa; }
+    .drive-path-preview {
+      font-size: 12px;
+      color: #6c7086;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -142,11 +166,16 @@
 
   <!-- Auth data storage -->
   <div class="section">
-    <div class="section-title">Хранение данных</div>
+    <div class="section-title">Хранение данных авторизации</div>
     <div class="field">
-      <label>Путь для хранения данных авторизации</label>
-      <input type="text" id="authDataPath" placeholder="По умолчанию: папка данных приложения" />
-      <span class="hint">Если не указан — данные хранятся в папке профиля текущего пользователя (~/.mailapp). Можно указать сетевой диск или общую папку (\\\\server\\share\\mailapp) — тогда авторизация будет общей для всех пользователей ПК.</span>
+      <label>Диск для хранения</label>
+      <div class="drive-row">
+        <select id="authDrive">
+          <option value="">Профиль пользователя (по умолчанию)</option>
+        </select>
+        <span class="drive-path-preview" id="drivePathPreview"></span>
+      </div>
+      <span class="hint">Выберите диск — данные сохранятся в <b>{буква}:\MailApp\</b>. Если у вас подключён сетевой диск с одной и той же буквой на всех ПК — данные авторизации будут общими, и приложение войдёт автоматически на любом компьютере.</span>
     </div>
   </div>
 
@@ -188,12 +217,28 @@
   const api = window.mailappSettings;
   let autoLaunch = false;
 
+  // Populate drive letters C–Z
+  const driveSelect = document.getElementById('authDrive');
+  for (let c = 67; c <= 90; c++) {
+    const opt = document.createElement('option');
+    opt.value = String.fromCharCode(c);
+    opt.textContent = String.fromCharCode(c) + ': (диск ' + String.fromCharCode(c) + ':)';
+    driveSelect.appendChild(opt);
+  }
+
+  function updateDrivePreview() {
+    const val = driveSelect.value;
+    document.getElementById('drivePathPreview').textContent = val ? val + ':\\MailApp\\auth.json' : '';
+  }
+  driveSelect.addEventListener('change', updateDrivePreview);
+
   // Load current settings
   api.load().then(({ settings, auth }) => {
     document.getElementById('appVersion').textContent = 'v' + (window.process?.versions?.electron || '');
     autoLaunch = !!settings.autoLaunch;
     renderToggle();
-    document.getElementById('authDataPath').value = settings.authDataPath || '';
+    driveSelect.value = settings.authDrive || '';
+    updateDrivePreview();
     document.getElementById('authLogin').value = auth.login || '';
     document.getElementById('authPassword').value = auth.password || '';
   });
@@ -211,7 +256,7 @@
   document.getElementById('btnSave').addEventListener('click', async () => {
     const settings = {
       autoLaunch,
-      authDataPath: document.getElementById('authDataPath').value.trim(),
+      authDrive: driveSelect.value,
     };
     const auth = {
       login: document.getElementById('authLogin').value.trim(),
