@@ -411,19 +411,6 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-label">Уведомления</div>
-          <div class="toggle-row">
-            <div>
-              <div style="font-size:13px;color:#2d2d4e;font-weight:500">Системные уведомления</div>
-              <div class="hint" style="margin-top:3px">Показывать уведомления Windows при получении новых писем</div>
-            </div>
-            <label class="toggle-wrap" style="margin-left:16px">
-              <input type="checkbox" id="chkNotifications" />
-              <div class="toggle-track"></div>
-            </label>
-          </div>
-        </div>
       </div>
       <div class="panel-footer">
         <div class="spacer"></div>
@@ -710,7 +697,6 @@
       if (selDrive) driveSelect.setValue(currentDrive, selDrive.label);
 
       document.getElementById('chkAutoLaunch').checked = !!settings.autoLaunch;
-      document.getElementById('chkNotifications').checked = !!settings.notifications;
       updateDrivePreview();
       onDriveChange();
     });
@@ -718,7 +704,7 @@
   // ── Save General ──
   document.getElementById('btnSaveGeneral').addEventListener('click', async () => {
     const { ok } = await api.save({
-      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, notifications: document.getElementById('chkNotifications').checked, authDrive: currentDrive },
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: currentDrive },
       auth: { login: loginInput.value.trim(), password: passwordInput.value },
     });
     if (ok) api.close();
@@ -729,7 +715,7 @@
     const login = loginInput.value.trim();
     const password = passwordInput.value;
     const { ok } = await api.save({
-      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, notifications: document.getElementById('chkNotifications').checked, authDrive: currentDrive },
+      settings: { autoLaunch: document.getElementById('chkAutoLaunch').checked, authDrive: currentDrive },
       auth: { login, password },
     });
     updateDrivePreview();

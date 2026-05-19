@@ -324,13 +324,6 @@ const UNREAD_POLLER = `
     setInterval(() => {
       const count = getCount();
       if (count !== last) {
-        if (last !== -1 && count > last) {
-          const diff = count - last;
-          window.__mailapp_ipc__.notify({
-            title: 'MailApp',
-            body: diff === 1 ? 'Новое письмо' : 'Новых писем: ' + diff,
-          });
-        }
         last = count;
         window.__mailapp_ipc__.setUnread(count);
       }
@@ -544,21 +537,6 @@ ipcMain.on('main:openSettings', () => { openSettings(); });
 // Unread badge from renderer
 ipcMain.on('main:setUnread', (_, count) => { setUnreadBadge(count); });
 
-// System notification forwarded from renderer (intercept mail.ru web notifications)
-ipcMain.on('main:notify', (_, { title, body, icon }) => {
-  const settings = readSettings();
-  if (!settings.notifications) return;
-  if (!Notification.isSupported()) return;
-  const n = new Notification({
-    title: title || 'MailApp',
-    body: body || '',
-    icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
-  });
-  n.on('click', () => {
-    if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
-  });
-  n.show();
-});
 
 // --- Auto-updater ---
 
