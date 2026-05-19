@@ -218,6 +218,7 @@
 <script>
   const api = window.mailappSettings;
   let autoLaunch = false;
+  let currentLogin = '';
   const driveSelect = document.getElementById('authDrive');
 
   const accountSelect  = document.getElementById('accountSelect');
@@ -284,8 +285,9 @@
       }
       updateDrivePreview();
     };
-    // Pre-select first real account
-    accountSelect.value = files[0].login;
+    // Pre-select current active login, fallback to first
+    const preferred = files.find(f => f.login === currentLogin) ? currentLogin : files[0].login;
+    accountSelect.value = preferred;
     accountSelect.onchange();
   }
 
@@ -308,10 +310,8 @@
       autoLaunch = !!settings.autoLaunch;
       renderToggle();
       driveSelect.value = settings.authDrive || '';
+      currentLogin = settings.authLogin || auth.login || '';
 
-      // Populate fields from saved settings (may be overridden by onDriveChange)
-      loginInput.value = auth.login || '';
-      passwordInput.value = auth.password || '';
       updateDrivePreview();
 
       // Trigger account list for current drive
