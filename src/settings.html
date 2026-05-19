@@ -164,9 +164,10 @@
     </div>
   </div>
 
-  <!-- Auth data storage -->
+  <!-- Auth data storage + auto-login -->
   <div class="section">
     <div class="section-title">Хранение данных авторизации</div>
+
     <div class="field">
       <label>Диск для хранения</label>
       <div class="drive-row">
@@ -175,21 +176,23 @@
         </select>
         <span class="drive-path-preview" id="drivePathPreview"></span>
       </div>
-      <span class="hint">Выберите диск — данные сохранятся в <b>{буква}:\MailApp\</b>. Если у вас подключён сетевой диск с одной и той же буквой на всех ПК — данные авторизации будут общими, и приложение войдёт автоматически на любом компьютере.</span>
+      <span class="hint">Файл: <b>{диск}:\MailApp\{логин}.json</b>. Сетевой диск с одинаковой буквой на всех ПК — авто-вход на любом компьютере.</span>
     </div>
-  </div>
 
-  <!-- Auto-login -->
-  <div class="section">
-    <div class="section-title">Автовход</div>
-    <div class="field">
+    <!-- Account selector — shown when multiple files exist on selected drive -->
+    <div class="field" id="accountSelectorRow" style="display:none">
+      <label>Аккаунт</label>
+      <select id="accountSelect"></select>
+    </div>
+
+    <div class="field" id="authFields">
       <label>Логин (email)</label>
-      <input type="text" id="authLogin" placeholder="user@mail.ru" autocomplete="username" />
+      <input type="text" id="authLogin" placeholder="user@nebolit.ru" autocomplete="username" />
     </div>
     <div class="field">
       <label>Пароль</label>
       <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
-      <span class="hint">Учётные данные сохраняются по указанному выше пути. Если авторизация слетит — приложение войдёт автоматически.</span>
+      <span class="hint" id="authHint">Данные хранятся зашифрованными. Если авторизация слетит — приложение войдёт автоматически.</span>
     </div>
   </div>
 
@@ -217,18 +220,18 @@
   let autoLaunch = false;
   const driveSelect = document.getElementById('authDrive');
 
+  const accountSelect  = document.getElementById('accountSelect');
+  const accountRow     = document.getElementById('accountSelectorRow');
+  const loginInput     = document.getElementById('authLogin');
+  const passwordInput  = document.getElementById('authPassword');
+
   function updateDrivePreview() {
     const val = driveSelect.value;
-    document.getElementById('drivePathPreview').textContent = val ? val + ':\\MailApp\\auth.json' : '';
+    const login = loginInput.value.trim();
+    const filename = login ? login.split('@')[0] + '.json' : '{логин}.json';
+    document.getElementById('drivePathPreview').textContent =
+      val ? val + ':\\MailApp\\' + filename : '';
   }
-
-  driveSelect.addEventListener('change', () => {
-    updateDrivePreview();
-    api.loadAuthFromDrive(driveSelect.value).then(auth => {
-      document.getElementById('authLogin').value = auth.login || '';
-      document.getElementById('authPassword').value = auth.password || '';
-    });
-  });
 
   function renderToggle() {
     document.getElementById('toggleAutoLaunch').className = 'toggle' + (autoLaunch ? ' on' : '');
@@ -239,41 +242,100 @@
     renderToggle();
   });
 
-  // Load app info, real drives and current settings in parallel
-  Promise.all([
-    api.getAppInfo(),
-    api.getDrives(),
-    api.load(),
-  ]).then(([info, drives, { settings, auth }]) => {
-    // Version + copyright in header
-    const v = info.version || '?';
-    document.getElementById('appVersion').innerHTML =
-      'v' + v + '<br><span style="font-size:10px;color:#6c7086">© 2026 Nebolit MailApp</span>';
+  loginInput.addEventListener('input', updateDrivePreview);
 
-    // Populate only real drives
-    drives.forEach(letter => {
+  // Load accounts from selected drive and update UI
+  async function onDriveChange() {
+    updateDrivePreview();
+    const drive = driveSelect.value;
+    const files = await api.listAuthFiles(drive);
+
+    accountSelect.innerHTML = '';
+    accountRow.style.display = 'none';
+    loginInput.value = '';
+    passwordInput.value = '';
+
+    if (files.length === 0) {
+      // No files — blank form for new entry
+      return;
+    }
+
+    if (files.length === 1) {
+      // Auto-load single account
+      const auth = await api.loadAuthByLogin(drive, files[0].login);
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+      updateDrivePreview();
+      return;
+    }
+
+    // Multiple accounts — show selector
+    accountRow.style.display = '';
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__';
+    newOpt.textContent = '+ Новая запись';
+    accountSelect.appendChild(newOpt);
+    files.forEach(f => {
       const opt = document.createElement('option');
-      opt.value = letter;
-      opt.textContent = letter + ': (диск ' + letter + ':)';
-      driveSelect.appendChild(opt);
+      opt.value = f.login;
+      opt.textContent = f.login + (f.hasPassword ? '' : ' (без пароля)');
+      accountSelect.appendChild(opt);
     });
 
-    autoLaunch = !!settings.autoLaunch;
-    renderToggle();
-    driveSelect.value = settings.authDrive || '';
-    updateDrivePreview();
-    document.getElementById('authLogin').value = auth.login || '';
-    document.getElementById('authPassword').value = auth.password || '';
-  });
+    accountSelect.onchange = async () => {
+      if (accountSelect.value === '__new__') {
+        loginInput.value = '';
+        passwordInput.value = '';
+      } else {
+        const auth = await api.loadAuthByLogin(drive, accountSelect.value);
+        loginInput.value = auth.login || '';
+        passwordInput.value = auth.password || '';
+      }
+      updateDrivePreview();
+    };
+    // Pre-select first real account
+    accountSelect.value = files[0].login;
+    accountSelect.onchange();
+  }
+
+  driveSelect.addEventListener('change', onDriveChange);
+
+  // Load app info, real drives and current settings in parallel
+  Promise.all([api.getAppInfo(), api.getDrives(), api.load()])
+    .then(([info, drives, { settings, auth }]) => {
+      const v = info.version || '?';
+      document.getElementById('appVersion').innerHTML =
+        'v' + v + '<br><span style="font-size:10px;color:#6c7086">© 2026 Nebolit MailApp</span>';
+
+      drives.forEach(letter => {
+        const opt = document.createElement('option');
+        opt.value = letter;
+        opt.textContent = letter + ': (диск ' + letter + ':)';
+        driveSelect.appendChild(opt);
+      });
+
+      autoLaunch = !!settings.autoLaunch;
+      renderToggle();
+      driveSelect.value = settings.authDrive || '';
+
+      // Populate fields from saved settings (may be overridden by onDriveChange)
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+      updateDrivePreview();
+
+      // Trigger account list for current drive
+      onDriveChange();
+    });
 
   document.getElementById('btnSave').addEventListener('click', async () => {
     const { ok } = await api.save({
       settings: { autoLaunch, authDrive: driveSelect.value },
       auth: {
-        login: document.getElementById('authLogin').value.trim(),
-        password: document.getElementById('authPassword').value,
+        login: loginInput.value.trim(),
+        password: passwordInput.value,
       },
     });
+    updateDrivePreview();
     showAlert(ok ? 'success' : 'error',
       ok ? 'Настройки сохранены.' : 'Ошибка сохранения. Проверьте права на запись.');
   });

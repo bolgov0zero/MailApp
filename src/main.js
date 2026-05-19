@@ -41,43 +41,72 @@ function writeSettings(data) {
 
 // --- Auth helpers (safeStorage encryption) ---
 
-function getAuthFilePath(settings) {
-  if (settings.authDrive) {
-    return path.join(settings.authDrive + ':\\MailApp', 'auth.dat');
-  }
-  return path.join(os.homedir(), '.mailapp', 'auth.dat');
+// --- Auth helpers ---
+// File name = username part of email (before @), e.g. reg@nebolit.ru → reg.json
+// Location: {drive}:\MailApp\reg.json  or  ~/.mailapp/reg.json
+
+function getAuthDir(drive) {
+  if (drive) return path.join(drive + ':\\MailApp');
+  return path.join(os.homedir(), '.mailapp');
 }
 
-function readAuth(settings) {
+function loginToFilename(login) {
+  const user = login && login.includes('@') ? login.split('@')[0] : (login || 'default');
+  // Sanitize: only keep safe filename chars
+  return user.replace(/[^a-zA-Z0-9._-]/g, '_') + '.json';
+}
+
+function getAuthFilePath(drive, login) {
+  return path.join(getAuthDir(drive), loginToFilename(login));
+}
+
+// List all auth files in a directory → [{ filename, login, hasPassword }]
+function listAuthFiles(drive) {
+  const dir = getAuthDir(drive);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter(f => f.endsWith('.json'))
+    .map(f => {
+      const auth = readAuthFromFile(path.join(dir, f));
+      return { filename: f, login: auth?.login || f.replace('.json', ''), hasPassword: !!auth?.password };
+    });
+}
+
+function readAuthFromFile(filePath) {
   try {
-    const p = getAuthFilePath(settings);
-    if (!fs.existsSync(p)) return null;
-    const raw = fs.readFileSync(p);
-    // safeStorage available and was used (starts with magic byte 0x01)
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath);
     if (safeStorage.isEncryptionAvailable() && raw[0] === 0x01) {
-      const decrypted = safeStorage.decryptString(raw.slice(1));
-      return JSON.parse(decrypted);
+      return JSON.parse(safeStorage.decryptString(raw.slice(1)));
     }
-    // Fallback: plain JSON (migration from old format or safeStorage unavailable)
     return JSON.parse(raw.toString('utf-8'));
   } catch (e) {
     return null;
   }
 }
 
-function writeAuth(settings, data) {
+function readAuth(drive, login) {
+  if (!login) {
+    // No login specified — try auto-detect: if exactly one file exists, use it
+    const files = listAuthFiles(drive);
+    if (files.length === 1) {
+      return readAuthFromFile(path.join(getAuthDir(drive), files[0].filename));
+    }
+    return null;
+  }
+  return readAuthFromFile(getAuthFilePath(drive, login));
+}
+
+function writeAuth(drive, data) {
   try {
-    const p = getAuthFilePath(settings);
+    const p = getAuthFilePath(drive, data.login);
     const dir = path.dirname(p);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const json = JSON.stringify(data);
     if (safeStorage.isEncryptionAvailable()) {
       const encrypted = safeStorage.encryptString(json);
-      // Prepend magic byte 0x01 to mark as safeStorage-encrypted
-      const buf = Buffer.concat([Buffer.from([0x01]), encrypted]);
-      fs.writeFileSync(p, buf);
+      fs.writeFileSync(p, Buffer.concat([Buffer.from([0x01]), encrypted]));
     } else {
-      // safeStorage not available (e.g. headless CI) — store plain
       fs.writeFileSync(p, json, 'utf-8');
     }
     return true;
@@ -340,7 +369,7 @@ function createMainWindow() {
 
     if (isLoginPage) {
       const settings = readSettings();
-      const auth = readAuth(settings);
+      const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
       if (auth && auth.login && auth.password) {
         mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
       }
@@ -433,14 +462,21 @@ ipcMain.handle('settings:getDrives', () => {
   }
 });
 
-ipcMain.handle('settings:loadAuthFromDrive', (_, drive) => {
-  const auth = readAuth(drive ? { authDrive: drive } : {});
+// List auth files on a drive → [{filename, login, hasPassword}]
+ipcMain.handle('settings:listAuthFiles', (_, drive) => {
+  return listAuthFiles(drive || null);
+});
+
+// Load one auth file by login name
+ipcMain.handle('settings:loadAuthByLogin', (_, { drive, login }) => {
+  const auth = readAuth(drive || null, login || null);
   return auth ? { login: auth.login, password: auth.password } : { login: '', password: '' };
 });
 
 ipcMain.handle('settings:load', () => {
   const settings = readSettings();
-  const auth = readAuth(settings);
+  // Auto-load: use saved authLogin, or auto-detect if only one file
+  const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
   return {
     settings,
     auth: auth ? { login: auth.login, password: auth.password } : { login: '', password: '' },
@@ -448,8 +484,12 @@ ipcMain.handle('settings:load', () => {
 });
 
 ipcMain.handle('settings:save', async (_, { settings, auth }) => {
-  const settingsOk = writeSettings(settings);
-  const authOk = writeAuth(settings, auth);
+  const settingsOk = writeSettings({
+    ...settings,
+    // Remember which login was last selected
+    authLogin: auth.login || '',
+  });
+  const authOk = auth.login ? writeAuth(settings.authDrive || null, auth) : true;
   try {
     const enabled = await autoLauncher.isEnabled();
     if (settings.autoLaunch && !enabled) await autoLauncher.enable();

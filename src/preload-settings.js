@@ -3,8 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('mailappSettings', {
   getAppInfo:       ()      => ipcRenderer.invoke('settings:getAppInfo'),
   getDrives:        ()      => ipcRenderer.invoke('settings:getDrives'),
-  load:             ()      => ipcRenderer.invoke('settings:load'),
-  loadAuthFromDrive:(drive) => ipcRenderer.invoke('settings:loadAuthFromDrive', drive),
+  load:             ()                  => ipcRenderer.invoke('settings:load'),
+  listAuthFiles:    (drive)             => ipcRenderer.invoke('settings:listAuthFiles', drive),
+  loadAuthByLogin:  (drive, login)      => ipcRenderer.invoke('settings:loadAuthByLogin', { drive, login }),
   save:             (data)  => ipcRenderer.invoke('settings:save', data),
   checkUpdate:          ()  => ipcRenderer.invoke('settings:checkUpdate'),
   downloadAndInstall:   ()  => ipcRenderer.invoke('settings:downloadAndInstall'),
