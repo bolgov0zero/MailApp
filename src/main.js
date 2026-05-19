@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell, Notification, nativeImage, safeStorage } = require('electron');
+const crypto = require('crypto');
 const { autoUpdater } = require('electron-updater');
 const AutoLaunch = require('auto-launch');
 const path = require('path');
@@ -39,9 +40,11 @@ function writeSettings(data) {
   }
 }
 
-// --- Auth helpers (safeStorage encryption) ---
-
 // --- Auth helpers ---
+
+// AES-256-GCM key — cross-machine symmetric encryption (magic byte 0x02)
+// Format: [0x02][12b IV][16b authTag][ciphertext]
+const AES_KEY = crypto.scryptSync('MailApp-Nebolit-2026', 'mailapp-salt-v1', 32);
 // File name = username part of email (before @), e.g. reg@nebolit.ru → reg.json
 // Location: {drive}:\MailApp\reg.json  or  ~/.mailapp/reg.json
 
@@ -72,10 +75,30 @@ function listAuthFiles(drive) {
     });
 }
 
+function aesEncrypt(text) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', AES_KEY, iv);
+  const enc = Buffer.concat([cipher.update(text, 'utf-8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([Buffer.from([0x02]), iv, tag, enc]);
+}
+
+function aesDecrypt(buf) {
+  const iv  = buf.slice(1, 13);
+  const tag = buf.slice(13, 29);
+  const enc = buf.slice(29);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', AES_KEY, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf-8');
+}
+
 function readAuthFromFile(filePath) {
   try {
     if (!fs.existsSync(filePath)) return null;
     const raw = fs.readFileSync(filePath);
+    if (raw[0] === 0x02) {
+      return JSON.parse(aesDecrypt(raw));
+    }
     if (safeStorage.isEncryptionAvailable() && raw[0] === 0x01) {
       return JSON.parse(safeStorage.decryptString(raw.slice(1)));
     }
@@ -103,12 +126,7 @@ function writeAuth(drive, data) {
     const dir = path.dirname(p);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const json = JSON.stringify(data);
-    if (safeStorage.isEncryptionAvailable()) {
-      const encrypted = safeStorage.encryptString(json);
-      fs.writeFileSync(p, Buffer.concat([Buffer.from([0x01]), encrypted]));
-    } else {
-      fs.writeFileSync(p, json, 'utf-8');
-    }
+    fs.writeFileSync(p, aesEncrypt(json));
     return true;
   } catch (e) {
     console.error('Failed to write auth:', e);
