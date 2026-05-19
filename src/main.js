@@ -15,7 +15,6 @@ const autoLauncher = new AutoLaunch({ name: 'MailApp' });
 
 let mainWindow;
 let settingsWindow;
-let manualLogoutPending = false;
 
 // --- Settings helpers ---
 
@@ -363,36 +362,39 @@ function createMainWindow() {
     return true;
   });
 
-  // Detect manual logout via navigation to logout URL
-  mainWindow.webContents.on('will-navigate', (_, url) => {
-    if (/logout|signout/i.test(url)) {
-      manualLogoutPending = true;
-    }
-  });
-
   mainWindow.webContents.on('did-finish-load', () => {
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
     const isMailPage  = /e\.mail\.ru/i.test(currentUrl) && !isLoginPage;
 
     if (isLoginPage) {
-      if (manualLogoutPending) {
-        // User clicked logout — remember and skip auto-login
-        manualLogoutPending = false;
-        writeSettings({ ...readSettings(), manualLogout: true });
-      } else {
-        const settings = readSettings();
-        if (!settings.manualLogout) {
-          const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
-          if (auth && auth.login && auth.password) {
-            mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
-          }
+      const settings = readSettings();
+      if (!settings.manualLogout) {
+        const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
+        if (auth && auth.login && auth.password) {
+          mainWindow.webContents.executeJavaScript(buildAutoLoginScript(auth.login, auth.password));
         }
       }
     }
 
     if (isMailPage) {
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
+      // Intercept logout button click
+      mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (window.__mailapp_logout_watcher__) return;
+          window.__mailapp_logout_watcher__ = true;
+          document.addEventListener('click', function(e) {
+            const el = e.target.closest('a, button, [role="menuitem"], [role="button"]');
+            if (!el) return;
+            const text = el.textContent.trim();
+            const href = el.href || el.getAttribute('href') || '';
+            if (/выйти|выход|log.?out|sign.?out/i.test(text) || /logout|signout/i.test(href)) {
+              window.__mailapp_ipc__.manualLogout();
+            }
+          }, true);
+        })();
+      `);
     }
 
     // Settings button overlay
@@ -519,7 +521,6 @@ ipcMain.handle('settings:save', async (_, { settings, auth }) => {
 
 ipcMain.handle('settings:relogin', async () => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  manualLogoutPending = false;
   // Clear cookies for all mail.ru / vk.ru domains so session is dropped
   const ses = mainWindow.webContents.session;
   const cookies = await ses.cookies.get({});
@@ -553,7 +554,8 @@ ipcMain.on('settings:minimize', () => { if (settingsWindow && !settingsWindow.is
 ipcMain.on('main:openSettings', () => { openSettings(); });
 
 // Unread badge from renderer
-ipcMain.on('main:setUnread', (_, count) => { setUnreadBadge(count); });
+ipcMain.on('main:setUnread',    (_, count) => { setUnreadBadge(count); });
+ipcMain.on('main:manualLogout', ()         => { writeSettings({ ...readSettings(), manualLogout: true }); });
 
 
 // --- Auto-updater ---
