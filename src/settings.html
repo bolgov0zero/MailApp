@@ -281,6 +281,20 @@
     }
     .btn-add-profile:hover { background: #5c6bc0; color: #fff; border-color: #5c6bc0; }
 
+    .btn-del-profile {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      border: 1.5px solid #e8e8f4;
+      background: #fff;
+      color: #ccc;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .btn-del-profile svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-del-profile:hover { background: #f87171; color: #fff; border-color: #f87171; }
+
     .hint { font-size: 11px; color: #bbb; line-height: 1.6; }
 
     .path-tag {
@@ -462,6 +476,7 @@
                 <div class="custom-select-dropdown" id="accountDropdown"></div>
               </div>
               <button class="btn-add-profile" id="btnAddProfile" title="Новый профиль">+</button>
+              <button class="btn-del-profile" id="btnDelProfile" title="Удалить профиль"><svg viewBox="0 0 16 16"><polyline points="2,4 14,4"/><path d="M6 4V2h4v2"/><path d="M3 4l1 10h8l1-10"/><line x1="6" y1="7" x2="6" y2="11"/><line x1="10" y1="7" x2="10" y2="11"/></svg></button>
             </div>
           </div>
 
@@ -607,6 +622,32 @@
       passwordInput.value = auth.password || '';
       updateDrivePreview();
     },
+  });
+
+  // ── Delete profile button ──
+  document.getElementById('btnDelProfile').addEventListener('click', async () => {
+    const login = document.getElementById('accountValue').textContent;
+    if (!login || login === 'Выберите профиль' || login === 'Новый профиль') return;
+    const { ok } = await api.deleteProfile(currentDrive, login);
+    if (!ok) return;
+    // Remove from options and reset fields
+    accountOptions = accountOptions.filter(o => o.value !== login);
+    loginInput.value = '';
+    passwordInput.value = '';
+    if (accountOptions.length === 0) {
+      accountRow.style.display = 'none';
+      document.getElementById('accountValue').textContent = 'Выберите профиль';
+      document.getElementById('accountValue').classList.add('placeholder');
+      document.getElementById('accountDropdown').innerHTML = '';
+    } else {
+      const first = accountOptions[0];
+      accountSelect.setOptions(accountOptions, first.value);
+      accountSelect.setValue(first.value, first.label);
+      const auth = await api.loadAuthByLogin(currentDrive, first.value);
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+    }
+    updateDrivePreview();
   });
 
   // ── Add profile button ──

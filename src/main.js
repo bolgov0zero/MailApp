@@ -362,6 +362,15 @@ function createMainWindow() {
     return true;
   });
 
+  // Intercept logout at the network level — fires before any navigation
+  ses.webRequest.onBeforeRequest(
+    { urls: ['*://account.mail.ru/user/logout*', '*://account.mail.ru/logout*', '*://auth.mail.ru/cgi-bin/logout*', '*://id.vk.ru/logout*'] },
+    (details, callback) => {
+      writeSettings({ ...readSettings(), manualLogout: true });
+      callback({});
+    }
+  );
+
   mainWindow.webContents.on('did-finish-load', () => {
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
@@ -379,22 +388,6 @@ function createMainWindow() {
 
     if (isMailPage) {
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
-      // Intercept logout button click
-      mainWindow.webContents.executeJavaScript(`
-        (function() {
-          if (window.__mailapp_logout_watcher__) return;
-          window.__mailapp_logout_watcher__ = true;
-          document.addEventListener('click', function(e) {
-            const el = e.target.closest('a, button, [role="menuitem"], [role="button"]');
-            if (!el) return;
-            const text = el.textContent.trim();
-            const href = el.href || el.getAttribute('href') || '';
-            if (/выйти|выход|log.?out|sign.?out/i.test(text) || /logout|signout/i.test(href)) {
-              window.__mailapp_ipc__.manualLogout();
-            }
-          }, true);
-        })();
-      `);
     }
 
     // Settings button overlay
@@ -545,6 +538,16 @@ ipcMain.handle('settings:checkUpdate', async () => {
     return { available, version: latest };
   } catch (e) {
     return { error: e.message };
+  }
+});
+
+ipcMain.handle('settings:deleteProfile', (_, { drive, login }) => {
+  try {
+    const p = getAuthFilePath(drive || null, login);
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
 });
 

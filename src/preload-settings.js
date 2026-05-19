@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('mailappSettings', {
   downloadAndInstall:   ()  => ipcRenderer.invoke('settings:downloadAndInstall'),
   onUpdateProgress: (cb)    => ipcRenderer.on('update:progress', (_, pct) => cb(pct)),
   openExternal:     (url)   => ipcRenderer.invoke('settings:openExternal', url),
+  deleteProfile:    (drive, login) => ipcRenderer.invoke('settings:deleteProfile', { drive, login }),
   relogin:          ()      => ipcRenderer.invoke('settings:relogin'),
   minimize:         ()      => ipcRenderer.send('settings:minimize'),
   close:            ()      => ipcRenderer.send('settings:close'),
