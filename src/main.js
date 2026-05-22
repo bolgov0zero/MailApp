@@ -371,12 +371,30 @@ function createMainWindow() {
   mainWindow.loadURL('https://e.mail.ru');
   mainWindow.setMenuBarVisibility(false);
 
-  // Cancel downloads triggered by auth redirect pages (not real user downloads)
+  // Task 1: cancel "download" files with no extension (technical redirects, not real attachments)
+  // Task 2: after real download completes, offer to open the file
   mainWindow.webContents.session.on('will-download', (event, item) => {
-    const url = item.getURL();
-    if (/id\.vk\.ru|account\.mail\.ru|auth\.mail\.ru/i.test(url)) {
+    const name = item.getFilename() || '';
+    const hasExt = path.extname(name).length > 0;
+    if (!hasExt && (name === '' || name === 'download')) {
       event.preventDefault();
+      return;
     }
+    item.on('done', (e, state) => {
+      if (state !== 'completed') return;
+      const filePath = item.getSavePath();
+      const { dialog } = require('electron');
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Загрузка завершена',
+        message: `Файл «${name}» загружен.`,
+        buttons: ['Открыть', 'Закрыть'],
+        defaultId: 0,
+        cancelId: 1,
+      }).then(({ response }) => {
+        if (response === 0) shell.openPath(filePath);
+      });
+    });
   });
 
   // Grant notification + push permissions (needed for service worker push)
@@ -400,13 +418,67 @@ function createMainWindow() {
     }
   );
 
+  // Task 3: retry on white screen (did-fail-load)
+  let failRetryCount = 0;
+  mainWindow.webContents.on('did-fail-load', (e, code, desc, url) => {
+    if (code === -3) return; // ERR_ABORTED — deliberate navigation cancel, ignore
+    if (failRetryCount < 3) {
+      failRetryCount++;
+      setTimeout(() => mainWindow.loadURL('https://e.mail.ru'), 2000 * failRetryCount);
+    } else {
+      // Show offline placeholder after 3 failed retries
+      mainWindow.webContents.executeJavaScript(`
+        (function() {
+          document.body.innerHTML = '';
+          document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f4f5fb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;flex-direction:column;gap:16px';
+          const t = document.createElement('div');
+          t.style.cssText = 'font-size:15px;color:#9999bb;font-weight:500';
+          t.textContent = 'Нет соединения';
+          const b = document.createElement('button');
+          b.textContent = 'Повторить';
+          b.style.cssText = 'padding:10px 24px;border:none;border-radius:10px;background:#5c6bc0;color:#fff;font-size:13px;font-weight:600;cursor:pointer';
+          b.onclick = () => location.replace('https://e.mail.ru');
+          document.body.appendChild(t);
+          document.body.appendChild(b);
+        })();
+      `);
+    }
+  });
+
   mainWindow.webContents.on('did-finish-load', () => {
+    failRetryCount = 0; // reset on successful load
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
     const isMailPage  = /e\.mail\.ru/i.test(currentUrl) && !isLoginPage;
 
     if (isLoginPage) {
       const settings = readSettings();
+      const hasAuth = !!(readAuth(settings.authDrive || null, settings.authLogin || null));
+
+      // Task 4: show auth overlay if we're going to auto-login
+      if (!settings.manualLogout && hasAuth) {
+        mainWindow.webContents.executeJavaScript(`
+          (function() {
+            if (document.getElementById('__mailapp_auth_overlay__')) return;
+            const ov = document.createElement('div');
+            ov.id = '__mailapp_auth_overlay__';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
+            ov.innerHTML = \`
+              <img src="https://e.mail.ru/favicon.ico" style="width:64px;height:64px;border-radius:16px;opacity:0.9" onerror="this.style.display='none'" />
+              <div style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
+                Авторизация<span id="__mailapp_dots__"></span>
+              </div>
+            \`;
+            document.body.appendChild(ov);
+            let d = 0;
+            setInterval(() => {
+              const el = document.getElementById('__mailapp_dots__');
+              if (el) el.textContent = '.'.repeat((d++ % 3) + 1);
+            }, 500);
+          })();
+        `);
+      }
+
       if (!settings.manualLogout) {
         const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
         if (auth && auth.login && auth.password) {
