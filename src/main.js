@@ -349,6 +349,14 @@ const UNREAD_POLLER = `
   })();
 `;
 
+// --- App icon as base64 (for injection into web pages) ---
+const APP_ICON_B64 = (() => {
+  try {
+    const p = path.join(__dirname, '..', 'icon.png');
+    return 'data:image/png;base64,' + fs.readFileSync(p).toString('base64');
+  } catch { return ''; }
+})();
+
 // --- Main window ---
 
 function createMainWindow() {
@@ -384,16 +392,34 @@ function createMainWindow() {
       if (state !== 'completed') return;
       const filePath = item.getSavePath();
       const { dialog } = require('electron');
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Загрузка завершена',
-        message: `Файл «${name}» загружен.`,
-        buttons: ['Открыть', 'Закрыть'],
-        defaultId: 0,
-        cancelId: 1,
-      }).then(({ response }) => {
-        if (response === 0) shell.openPath(filePath);
-      });
+      const safeFilePath = JSON.stringify(filePath);
+      const safeName     = JSON.stringify(name);
+      mainWindow.webContents.executeJavaScript(`
+        (function() {
+          if (document.getElementById('__mailapp_dl_toast__')) document.getElementById('__mailapp_dl_toast__').remove();
+          const toast = document.createElement('div');
+          toast.id = '__mailapp_dl_toast__';
+          toast.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:2147483647;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:16px 20px;display:flex;align-items:center;gap:14px;min-width:280px;max-width:360px;animation:__ma_slide__ 0.3s ease';
+          toast.innerHTML = \`
+            <style>@keyframes __ma_slide__{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}</style>
+            <div style="width:40px;height:40px;border-radius:10px;background:#f0f1fb;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div style="flex:1;overflow:hidden">
+              <div style="font-size:13px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${${safeName}}</div>
+              <div style="font-size:11px;color:#9999bb;margin-top:2px">Загрузка завершена</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button id="__mailapp_dl_open__" style="padding:6px 14px;border:none;border-radius:8px;background:#5c6bc0;color:#fff;font-size:12px;font-weight:600;cursor:pointer">Открыть</button>
+              <button id="__mailapp_dl_close__" style="padding:6px 14px;border:none;border-radius:8px;background:#f0f1fb;color:#9999bb;font-size:12px;font-weight:600;cursor:pointer">Закрыть</button>
+            </div>
+          \`;
+          document.body.appendChild(toast);
+          document.getElementById('__mailapp_dl_open__').onclick  = () => { window.__mailapp_ipc__.openFile(${safeFilePath}); toast.remove(); };
+          document.getElementById('__mailapp_dl_close__').onclick = () => toast.remove();
+          setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+        })();
+      `).catch(() => {});
     });
   });
 
@@ -464,7 +490,7 @@ function createMainWindow() {
             ov.id = '__mailapp_auth_overlay__';
             ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
             ov.innerHTML = \`
-              <img src="https://e.mail.ru/favicon.ico" style="width:64px;height:64px;border-radius:16px;opacity:0.9" onerror="this.style.display='none'" />
+              <img src="${APP_ICON_B64}" style="width:72px;height:72px;border-radius:18px;box-shadow:0 4px 20px rgba(0,0,0,0.25)" />
               <div style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
                 Авторизация<span id="__mailapp_dots__"></span>
               </div>
@@ -657,6 +683,7 @@ ipcMain.on('main:openSettings', () => { openSettings(); });
 // Unread badge from renderer
 ipcMain.on('main:setUnread',    (_, count) => { setUnreadBadge(count); });
 ipcMain.on('main:manualLogout', ()         => { writeSettings({ ...readSettings(), manualLogout: true }); });
+ipcMain.on('main:openFile',     (_, filePath) => { shell.openPath(filePath); });
 
 
 // --- Auto-updater ---
