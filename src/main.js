@@ -360,9 +360,18 @@ const APP_ICON_B64 = (() => {
 // --- Main window ---
 
 function createMainWindow() {
+  const saved = readSettings().windowBounds || {};
+  const winWidth  = saved.width      || 1280;
+  const winHeight = saved.height     || 800;
+  const winX      = saved.x          ?? undefined;
+  const winY      = saved.y          ?? undefined;
+  const winMax    = saved.maximized  || false;
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: winWidth,
+    height: winHeight,
+    x: winX,
+    y: winY,
     minWidth: 800,
     minHeight: 600,
     title: 'MailApp',
@@ -375,6 +384,22 @@ function createMainWindow() {
       partition: 'persist:mailru',
     },
   });
+
+  if (winMax) mainWindow.maximize();
+
+  // Save window bounds on resize/move
+  function saveWindowBounds() {
+    if (mainWindow.isMaximized()) {
+      writeSettings({ ...readSettings(), windowBounds: { ...readSettings().windowBounds, maximized: true } });
+    } else {
+      const b = mainWindow.getBounds();
+      writeSettings({ ...readSettings(), windowBounds: { width: b.width, height: b.height, x: b.x, y: b.y, maximized: false } });
+    }
+  }
+  mainWindow.on('resize', saveWindowBounds);
+  mainWindow.on('move',   saveWindowBounds);
+  mainWindow.on('maximize',   saveWindowBounds);
+  mainWindow.on('unmaximize', saveWindowBounds);
 
   mainWindow.loadURL('https://e.mail.ru');
   mainWindow.setMenuBarVisibility(false);
