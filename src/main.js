@@ -469,21 +469,7 @@ function createMainWindow() {
     }
   );
 
-  // Hide page immediately on any main-frame navigation (before render)
-  let hideCssKey = null;
-  mainWindow.webContents.on('did-start-navigation', ({ isMainFrame }) => {
-    if (!isMainFrame) return;
-    mainWindow.webContents.insertCSS('html{opacity:0!important}')
-      .then(key => { hideCssKey = key; })
-      .catch(() => {});
-  });
-
-  function revealPage() {
-    if (hideCssKey) {
-      mainWindow.webContents.removeInsertedCSS(hideCssKey).catch(() => {});
-      hideCssKey = null;
-    }
-  }
+  function revealPage() {} // no-op: overlays cover the page, no CSS hiding needed
 
   // Inject all overlays on dom-ready, then reveal the page
   mainWindow.webContents.on('dom-ready', () => {
