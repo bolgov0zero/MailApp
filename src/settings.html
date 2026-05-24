@@ -692,15 +692,21 @@
     }));
     accountOptions = opts;
 
-    const preferred = files.find(f => f.login === currentLogin) ? currentLogin : files[0].login;
-    const prefOpt = opts.find(o => o.value === preferred);
+    accountSelect.setOptions(opts, currentLogin || null);
 
-    accountSelect.setOptions(opts, preferred);
-    accountSelect.setValue(preferred, prefOpt ? prefOpt.label : preferred);
-
-    const auth = await api.loadAuthByLogin(currentDrive, preferred);
-    loginInput.value = auth.login || '';
-    passwordInput.value = auth.password || '';
+    if (currentLogin && files.find(f => f.login === currentLogin)) {
+      const prefOpt = opts.find(o => o.value === currentLogin);
+      accountSelect.setValue(currentLogin, prefOpt ? prefOpt.label : currentLogin);
+      const auth = await api.loadAuthByLogin(currentDrive, currentLogin);
+      loginInput.value = auth.login || '';
+      passwordInput.value = auth.password || '';
+    } else {
+      // No selection — show placeholder
+      document.getElementById('accountValue').textContent = 'Выберите профиль';
+      document.getElementById('accountValue').classList.add('placeholder');
+      loginInput.value = '';
+      passwordInput.value = '';
+    }
     updateDrivePreview();
   }
 
@@ -739,7 +745,7 @@
         ...drives.map(l => ({ value: l, label: l + ': (диск ' + l + ':)', icon: IC.drive })),
       ];
       currentDrive = settings.authDrive || '';
-      currentLogin = settings.authLogin || auth.login || '';
+      currentLogin = settings.manualLogout ? '' : (settings.authLogin || auth.login || '');
       const selDrive = allDriveOpts.find(o => o.value === currentDrive);
       driveSelect.setOptions(allDriveOpts, currentDrive);
       if (selDrive) driveSelect.setValue(currentDrive, selDrive.label);

@@ -469,6 +469,102 @@ function createMainWindow() {
     }
   );
 
+  // Hide page immediately on any main-frame navigation (before render)
+  let hideCssKey = null;
+  mainWindow.webContents.on('did-start-navigation', ({ isMainFrame }) => {
+    if (!isMainFrame) return;
+    mainWindow.webContents.insertCSS('html{opacity:0!important}')
+      .then(key => { hideCssKey = key; })
+      .catch(() => {});
+  });
+
+  function revealPage() {
+    if (hideCssKey) {
+      mainWindow.webContents.removeInsertedCSS(hideCssKey).catch(() => {});
+      hideCssKey = null;
+    }
+  }
+
+  // Inject all overlays on dom-ready, then reveal the page
+  mainWindow.webContents.on('dom-ready', () => {
+    const currentUrl = mainWindow.webContents.getURL();
+    const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
+
+    const scripts = [];
+
+    if (isLoginPage) {
+      const settings = readSettings();
+      const hasAuth  = !!(readAuth(settings.authDrive || null, settings.authLogin || null));
+
+      if (!hasAuth || settings.manualLogout) {
+        scripts.push(`
+          (function() {
+            if (document.getElementById('__mailapp_auth_overlay__')) return;
+            const ov = document.createElement('div');
+            ov.id = '__mailapp_auth_overlay__';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1e1e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+            ov.innerHTML = \`
+              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" />
+              <div style="color:#fff;font-size:22px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin-top:4px">MailApp</div>
+              <div style="color:rgba(255,255,255,0.5);font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
+              <button id="__mailapp_open_settings__" style="margin-top:8px;padding:10px 28px;border:none;border-radius:12px;background:#5c6bc0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"
+                onmouseover="this.style.background='#4a5ab0'" onmouseout="this.style.background='#5c6bc0'">
+                Открыть настройки
+              </button>
+            \`;
+            document.documentElement.appendChild(ov);
+            document.getElementById('__mailapp_open_settings__').onclick = () => window.__mailapp_ipc__.openSettingsProfiles();
+          })();
+        `);
+      } else {
+        scripts.push(`
+          (function() {
+            if (document.getElementById('__mailapp_auth_overlay__')) return;
+            const ov = document.createElement('div');
+            ov.id = '__mailapp_auth_overlay__';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
+            ov.innerHTML = \`
+              <img src="${APP_ICON_B64}" style="width:72px;height:72px;border-radius:18px;box-shadow:0 4px 20px rgba(0,0,0,0.25)" />
+              <div style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
+                Авторизация<span id="__mailapp_dots__"></span>
+              </div>
+            \`;
+            document.documentElement.appendChild(ov);
+            let d = 0;
+            setInterval(() => { const el = document.getElementById('__mailapp_dots__'); if (el) el.textContent = '.'.repeat((d++ % 3) + 1); }, 500);
+          })();
+        `);
+      }
+    }
+
+    // Settings button — on every page
+    scripts.push(`
+      (function() {
+        if (document.getElementById('__mailapp_settings_btn__')) return;
+        const btn = document.createElement('button');
+        btn.id = '__mailapp_settings_btn__';
+        btn.innerHTML = '⚙';
+        btn.title = 'Настройки MailApp';
+        btn.style.cssText = [
+          'position:fixed','bottom:18px','right:18px','z-index:2147483646',
+          'width:40px','height:40px','border-radius:50%',
+          'background:rgba(30,30,30,0.75)','color:#fff','font-size:20px',
+          'border:none','cursor:pointer','display:flex',
+          'align-items:center','justify-content:center',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.4)',
+          'backdrop-filter:blur(4px)','transition:background 0.2s',
+        ].join(';');
+        btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(30,30,30,0.95)');
+        btn.addEventListener('mouseleave', () => btn.style.background = 'rgba(30,30,30,0.75)');
+        btn.addEventListener('click', () => window.__mailapp_ipc__.openSettings());
+        document.documentElement.appendChild(btn);
+      })();
+    `);
+
+    Promise.all(scripts.map(s => mainWindow.webContents.executeJavaScript(s).catch(() => {})))
+      .then(revealPage);
+  });
+
   // Task 3: retry on white screen (did-fail-load)
   let failRetryCount = 0;
   mainWindow.webContents.on('did-fail-load', (e, code, desc, url) => {
@@ -504,56 +600,6 @@ function createMainWindow() {
 
     if (isLoginPage) {
       const settings = readSettings();
-      const hasAuth = !!(readAuth(settings.authDrive || null, settings.authLogin || null));
-
-      // No profile / manual logout — show "select profile" placeholder
-      if (!hasAuth || settings.manualLogout) {
-        mainWindow.webContents.executeJavaScript(`
-          (function() {
-            if (document.getElementById('__mailapp_auth_overlay__')) return;
-            const ov = document.createElement('div');
-            ov.id = '__mailapp_auth_overlay__';
-            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1e1e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
-            ov.innerHTML = \`
-              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" />
-              <div style="color:#fff;font-size:22px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin-top:4px">MailApp</div>
-              <div style="color:rgba(255,255,255,0.5);font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
-              <button id="__mailapp_open_settings__" style="margin-top:8px;padding:10px 28px;border:none;border-radius:12px;background:#5c6bc0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;transition:background 0.15s"
-                onmouseover="this.style.background='#4a5ab0'"
-                onmouseout="this.style.background='#5c6bc0'">
-                Открыть настройки
-              </button>
-            \`;
-            document.body.appendChild(ov);
-            document.getElementById('__mailapp_open_settings__').onclick = () => window.__mailapp_ipc__.openSettingsProfiles();
-          })();
-        `);
-      }
-
-      // Task 4: show auth overlay if we're going to auto-login
-      if (!settings.manualLogout && hasAuth) {
-        mainWindow.webContents.executeJavaScript(`
-          (function() {
-            if (document.getElementById('__mailapp_auth_overlay__')) return;
-            const ov = document.createElement('div');
-            ov.id = '__mailapp_auth_overlay__';
-            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
-            ov.innerHTML = \`
-              <img src="${APP_ICON_B64}" style="width:72px;height:72px;border-radius:18px;box-shadow:0 4px 20px rgba(0,0,0,0.25)" />
-              <div style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
-                Авторизация<span id="__mailapp_dots__"></span>
-              </div>
-            \`;
-            document.body.appendChild(ov);
-            let d = 0;
-            setInterval(() => {
-              const el = document.getElementById('__mailapp_dots__');
-              if (el) el.textContent = '.'.repeat((d++ % 3) + 1);
-            }, 500);
-          })();
-        `);
-      }
-
       if (!settings.manualLogout) {
         const auth = readAuth(settings.authDrive || null, settings.authLogin || null);
         if (auth && auth.login && auth.password) {
@@ -565,30 +611,6 @@ function createMainWindow() {
     if (isMailPage) {
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
     }
-
-    // Settings button overlay
-    mainWindow.webContents.executeJavaScript(`
-      (function() {
-        if (document.getElementById('__mailapp_settings_btn__')) return;
-        const btn = document.createElement('button');
-        btn.id = '__mailapp_settings_btn__';
-        btn.innerHTML = '⚙';
-        btn.title = 'Настройки MailApp';
-        btn.style.cssText = [
-          'position:fixed','bottom:18px','right:18px','z-index:2147483647',
-          'width:40px','height:40px','border-radius:50%',
-          'background:rgba(30,30,30,0.75)','color:#fff','font-size:20px',
-          'border:none','cursor:pointer','display:flex',
-          'align-items:center','justify-content:center',
-          'box-shadow:0 2px 8px rgba(0,0,0,0.4)',
-          'backdrop-filter:blur(4px)','transition:background 0.2s',
-        ].join(';');
-        btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(30,30,30,0.95)');
-        btn.addEventListener('mouseleave', () => btn.style.background = 'rgba(30,30,30,0.75)');
-        btn.addEventListener('click', () => window.__mailapp_ipc__.openSettings());
-        document.body.appendChild(btn);
-      })();
-    `);
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
