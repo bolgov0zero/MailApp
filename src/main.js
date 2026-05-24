@@ -614,10 +614,10 @@ function createMainWindow() {
     if (!hasSel && !isEditable) return;
 
     const items = [];
-    if (isEditable && hasSel) items.push({ id: 'cut',       label: 'Вырезать',     icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="20" r="2"/><circle cx="6" cy="4" r="2"/><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="14" y2="10"/><line x1="18" y1="4" x2="10" y2="12"/></svg>` });
-    if (hasSel)              items.push({ id: 'copy',      label: 'Копировать',   icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>` });
-    if (isEditable)          items.push({ id: 'paste',     label: 'Вставить',     icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>` });
-    if (isEditable)          items.push({ id: 'selectAll', label: 'Выделить всё', icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3z"/><path d="M15 3h6v6h-6z"/><path d="M3 15h6v6H3z"/><path d="M15 15h6v6h-6z"/></svg>` });
+    if (isEditable && hasSel) items.push({ id: 'cut',       label: 'Вырезать',     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="20" r="2"/><circle cx="6" cy="4" r="2"/><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="14" y2="10"/><line x1="18" y1="4" x2="10" y2="12"/></svg>` });
+    if (hasSel)              items.push({ id: 'copy',      label: 'Копировать',   icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>` });
+    if (isEditable)          items.push({ id: 'paste',     label: 'Вставить',     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>` });
+    if (isEditable)          items.push({ id: 'selectAll', label: 'Выделить всё', icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h6v6H3z"/><path d="M15 3h6v6h-6z"/><path d="M3 15h6v6H3z"/><path d="M15 15h6v6h-6z"/></svg>` });
 
     if (!items.length) return;
 
@@ -632,27 +632,28 @@ function createMainWindow() {
           'position:fixed', 'z-index:2147483647',
           'left:${x}px', 'top:${y}px',
           'background:#fff',
-          'border-radius:12px',
-          'box-shadow:0 4px 24px rgba(0,0,0,0.13),0 1px 4px rgba(0,0,0,0.08)',
-          'padding:6px',
-          'min-width:180px',
-          'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif',
-          'font-size:13px',
+          'border-radius:8px',
+          'box-shadow:0 8px 24px rgba(0,0,0,0.16),0 2px 6px rgba(0,0,0,0.08)',
+          'padding:4px 0',
+          'min-width:200px',
+          'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+          'font-size:14px',
           'user-select:none',
-          'animation:__ma_ctx_in__ 0.12s ease',
+          'animation:__ma_ctx_in__ 0.1s ease',
+          'overflow:hidden',
         ].join(';');
 
         const style = document.createElement('style');
-        style.textContent = '@keyframes __ma_ctx_in__{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}';
+        style.textContent = '@keyframes __ma_ctx_in__{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}';
         menu.appendChild(style);
 
         const actions = ${JSON.stringify(items.map(i => ({ id: i.id, label: i.label, icon: i.icon })))};
 
         actions.forEach((item, idx) => {
           const row = document.createElement('div');
-          row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1a1a2e;transition:background 0.1s';
-          row.innerHTML = '<span style="color:#9999bb;display:flex;flex-shrink:0">' + item.icon + '</span><span>' + item.label + '</span>';
-          row.addEventListener('mouseenter', () => row.style.background = '#f0f1fb');
+          row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;color:#000;font-weight:400;transition:background 0.08s';
+          row.innerHTML = '<span style="color:#666;display:flex;flex-shrink:0">' + item.icon + '</span><span>' + item.label + '</span>';
+          row.addEventListener('mouseenter', () => row.style.background = '#f5f5f5');
           row.addEventListener('mouseleave', () => row.style.background = '');
           row.addEventListener('mousedown', e => { e.preventDefault(); });
           row.addEventListener('click', () => {
