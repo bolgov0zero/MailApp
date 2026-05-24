@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Notification, nativeImage, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification, nativeImage, safeStorage, Menu } = require('electron');
 const crypto = require('crypto');
 const { autoUpdater } = require('electron-updater');
 const AutoLaunch = require('auto-launch');
@@ -573,6 +573,21 @@ function createMainWindow() {
 
   mainWindow.webContents.on('did-create-window', (win) => {
     win.setMenuBarVisibility(false);
+  });
+
+  // System context menu (Copy / Paste / etc.)
+  mainWindow.webContents.on('context-menu', (e, params) => {
+    const items = [];
+    if (params.selectionText) {
+      items.push({ label: 'Копировать', role: 'copy' });
+    }
+    if (params.isEditable) {
+      if (params.selectionText) items.push({ label: 'Вырезать', role: 'cut' });
+      items.push({ label: 'Вставить', role: 'paste' });
+      items.push({ type: 'separator' });
+      items.push({ label: 'Выделить всё', role: 'selectAll' });
+    }
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: mainWindow });
   });
 
   mainWindow.webContents.on('did-navigate-in-page', () => {
