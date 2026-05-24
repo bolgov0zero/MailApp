@@ -513,19 +513,19 @@ function createMainWindow() {
             if (document.getElementById('__mailapp_auth_overlay__')) return;
             const ov = document.createElement('div');
             ov.id = '__mailapp_auth_overlay__';
-            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1e1e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
             ov.innerHTML = \`
-              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.25)" />
+              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" />
               <div style="color:#fff;font-size:22px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin-top:4px">MailApp</div>
-              <div style="color:rgba(255,255,255,0.7);font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
-              <button id="__mailapp_open_settings__" style="margin-top:8px;padding:10px 28px;border:none;border-radius:12px;background:rgba(255,255,255,0.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;transition:background 0.15s"
-                onmouseover="this.style.background='rgba(255,255,255,0.3)'"
-                onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+              <div style="color:rgba(255,255,255,0.5);font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
+              <button id="__mailapp_open_settings__" style="margin-top:8px;padding:10px 28px;border:none;border-radius:12px;background:#5c6bc0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;transition:background 0.15s"
+                onmouseover="this.style.background='#4a5ab0'"
+                onmouseout="this.style.background='#5c6bc0'">
                 Открыть настройки
               </button>
             \`;
             document.body.appendChild(ov);
-            document.getElementById('__mailapp_open_settings__').onclick = () => window.__mailapp_ipc__.openSettings();
+            document.getElementById('__mailapp_open_settings__').onclick = () => window.__mailapp_ipc__.openSettingsProfiles();
           })();
         `);
       }
@@ -624,9 +624,10 @@ function createMainWindow() {
 
 // --- Settings window ---
 
-function openSettings() {
+function openSettings(tab) {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.focus();
+    if (tab) settingsWindow.webContents.executeJavaScript(`switchTab(${JSON.stringify(tab)})`).catch(() => {});
     return;
   }
   settingsWindow = new BrowserWindow({
@@ -646,7 +647,7 @@ function openSettings() {
       nodeIntegration: false,
     },
   });
-  settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
+  settingsWindow.loadFile(path.join(__dirname, 'settings.html'), tab ? { hash: tab } : {});
   settingsWindow.setMenuBarVisibility(false);
 }
 
@@ -742,7 +743,8 @@ ipcMain.handle('settings:deleteProfile', (_, { drive, login }) => {
 ipcMain.handle('settings:openExternal', (_, url) => { shell.openExternal(url); });
 ipcMain.on('settings:close',    () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
 ipcMain.on('settings:minimize', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.minimize(); });;
-ipcMain.on('main:openSettings', () => { openSettings(); });
+ipcMain.on('main:openSettings',         () => { openSettings(); });
+ipcMain.on('main:openSettingsProfiles', () => { openSettings('profiles'); });
 
 // Unread badge from renderer
 ipcMain.on('main:setUnread',    (_, count) => { setUnreadBadge(count); });

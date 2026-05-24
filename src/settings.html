@@ -705,14 +705,21 @@
   }
 
   // ── Tabs ──
+  function switchTab(name) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const item = document.querySelector(`.nav-item[data-tab="${name}"]`);
+    if (item) item.classList.add('active');
+    const panel = document.getElementById('tab-' + name);
+    if (panel) panel.classList.add('active');
+  }
+
   document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      item.classList.add('active');
-      document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-    });
+    item.addEventListener('click', () => switchTab(item.dataset.tab));
   });
+
+  // Open on specific tab if hash is set
+  if (location.hash) switchTab(location.hash.slice(1));
 
   // ── Window controls ──
   document.getElementById('btnWinClose').addEventListener('click', () => api.close());
