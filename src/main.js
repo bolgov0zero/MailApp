@@ -488,11 +488,11 @@ function createMainWindow() {
             if (document.getElementById('__mailapp_auth_overlay__')) return;
             const ov = document.createElement('div');
             ov.id = '__mailapp_auth_overlay__';
-            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#1e1e2e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px';
             ov.innerHTML = \`
-              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" />
-              <div style="color:#fff;font-size:22px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin-top:4px">MailApp</div>
-              <div style="color:rgba(255,255,255,0.5);font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
+              <img src="${APP_ICON_B64}" style="width:80px;height:80px;border-radius:20px;box-shadow:0 4px 24px rgba(92,107,192,0.25)" />
+              <div style="color:#1a1a2e;font-size:22px;font-weight:700;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin-top:4px">MailApp</div>
+              <div style="color:#9999bb;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">Выберите профиль для авторизации</div>
               <button id="__mailapp_open_settings__" style="margin-top:8px;padding:10px 28px;border:none;border-radius:12px;background:#5c6bc0;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"
                 onmouseover="this.style.background='#4a5ab0'" onmouseout="this.style.background='#5c6bc0'">
                 Открыть настройки
@@ -508,11 +508,11 @@ function createMainWindow() {
             if (document.getElementById('__mailapp_auth_overlay__')) return;
             const ov = document.createElement('div');
             ov.id = '__mailapp_auth_overlay__';
-            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#5c6bc0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px';
             ov.innerHTML = \`
-              <img src="${APP_ICON_B64}" style="width:72px;height:72px;border-radius:18px;box-shadow:0 4px 20px rgba(0,0,0,0.25)" />
-              <div style="color:#fff;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
-                Авторизация<span id="__mailapp_dots__"></span>
+              <img src="${APP_ICON_B64}" style="width:72px;height:72px;border-radius:18px;box-shadow:0 4px 20px rgba(92,107,192,0.25)" />
+              <div style="color:#1a1a2e;font-size:18px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:0.02em">
+                Авторизация<span id="__mailapp_dots__" style="color:#5c6bc0"></span>
               </div>
             \`;
             document.documentElement.appendChild(ov);
@@ -563,7 +563,7 @@ function createMainWindow() {
       mainWindow.webContents.executeJavaScript(`
         (function() {
           document.body.innerHTML = '';
-          document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#f4f5fb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;flex-direction:column;gap:16px';
+          document.body.style.cssText = 'margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#fff;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;flex-direction:column;gap:16px';
           const t = document.createElement('div');
           t.style.cssText = 'font-size:15px;color:#9999bb;font-weight:500';
           t.textContent = 'Нет соединения';
