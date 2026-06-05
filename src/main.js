@@ -315,6 +315,59 @@ function buildAutoLoginScript(login, password) {
   `;
 }
 
+// --- Widget dismisser: auto-close "Interesting events" sidebar popup ---
+const WIDGET_DISMISSER = `
+  (function() {
+    if (window.__mailapp_widget_dismisser__) return;
+    window.__mailapp_widget_dismisser__ = true;
+
+    function tryDismiss() {
+      // Strategy 1: find "Пропустить" button anywhere on the page
+      for (const btn of document.querySelectorAll('button, [role="button"]')) {
+        if (btn.textContent?.trim() === 'Пропустить') {
+          btn.click();
+          return true;
+        }
+      }
+
+      // Strategy 2: find the widget container by title text, then click its close button
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.textContent?.includes('Интересные события')) {
+          // Walk up to find panel container (up to 8 levels)
+          let container = node.parentElement;
+          for (let i = 0; i < 8; i++) {
+            if (!container) break;
+            // Look for close button inside this container
+            for (const btn of container.querySelectorAll('button, [role="button"]')) {
+              const text  = btn.textContent?.trim();
+              const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+              if (text === '×' || text === '✕' || text === '✖' || text === '' && btn.querySelector('svg') ||
+                  label.includes('закрыт') || label.includes('close')) {
+                btn.click();
+                return true;
+              }
+            }
+            container = container.parentElement;
+          }
+        }
+      }
+      return false;
+    }
+
+    // Try immediately, then watch DOM for widget appearing
+    if (!tryDismiss()) {
+      const observer = new MutationObserver(() => {
+        if (tryDismiss()) observer.disconnect();
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      // Stop after 60s to avoid lingering observers
+      setTimeout(() => observer.disconnect(), 60000);
+    }
+  })();
+`;
+
 // --- Unread count poller (injected into mail page) ---
 
 const UNREAD_POLLER = `
@@ -609,6 +662,7 @@ function createMainWindow() {
 
     if (isMailPage) {
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
+      mainWindow.webContents.executeJavaScript(WIDGET_DISMISSER);
     }
   });
 
