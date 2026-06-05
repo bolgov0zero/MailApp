@@ -382,6 +382,7 @@ function createMainWindow() {
       nodeIntegration: false,
       webSecurity: true,
       partition: 'persist:mailru',
+      backgroundThrottling: false,
     },
   });
 
@@ -400,6 +401,7 @@ function createMainWindow() {
   mainWindow.on('move',   saveWindowBounds);
   mainWindow.on('maximize',   saveWindowBounds);
   mainWindow.on('unmaximize', saveWindowBounds);
+  mainWindow.on('restore', () => mainWindow.webContents.invalidate());
 
   mainWindow.loadURL('https://e.mail.ru');
   mainWindow.setMenuBarVisibility(false);
