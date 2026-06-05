@@ -324,9 +324,12 @@ const WIDGET_DISMISSER_IFRAME = `
     window.__mailapp_widget_dismisser__ = true;
 
     function tryDismiss() {
+      // × close button in TabsHeader (accent-colored, top-right of widget)
+      const closeBtn = document.querySelector('button[class*="TabsHeader_button"][class*="appearance-accent"]');
+      if (closeBtn) { closeBtn.click(); return true; }
+      // "Пропустить" button ("Интересные события" view)
       for (const btn of document.querySelectorAll('button, [role="button"]')) {
-        const text = btn.textContent?.trim();
-        if (text === 'Пропустить') { btn.click(); return true; }
+        if (btn.textContent?.trim() === 'Пропустить') { btn.click(); return true; }
       }
       return false;
     }
