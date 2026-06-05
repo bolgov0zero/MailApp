@@ -512,6 +512,13 @@ function createMainWindow() {
     return true;
   });
 
+  // Block calendar/widgets iframe — it causes cyclic page reloads when its
+  // backend is unreachable (ERR_CONNECTION_REFUSED from firewall etc.)
+  ses.webRequest.onBeforeRequest(
+    { urls: ['*://widgets.mail.ru/*', '*://touch.calendar.mail.ru/*', '*://calendarx.imgsmail.ru/*'] },
+    (details, callback) => callback({ cancel: true })
+  );
+
   // Intercept logout at the network level — fires before any navigation
   // Cooldown prevents repeated triggers during post-auth redirect chains
   let lastLogoutTime = 0;
