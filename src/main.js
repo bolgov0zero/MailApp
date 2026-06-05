@@ -460,9 +460,20 @@ function createMainWindow() {
   });
 
   // Intercept logout at the network level — fires before any navigation
+  // Cooldown prevents repeated triggers during post-auth redirect chains
+  let lastLogoutTime = 0;
+  const LOGOUT_COOLDOWN_MS = 10000;
+
   ses.webRequest.onBeforeRequest(
     { urls: ['*://account.mail.ru/user/logout*', '*://account.mail.ru/logout*', '*://auth.mail.ru/cgi-bin/logout*', '*://id.vk.ru/logout*'] },
     (details, callback) => {
+      const now = Date.now();
+      // Only handle main frame navigation, ignore sub-resources and redirect chains
+      if (details.resourceType !== 'mainFrame' || now - lastLogoutTime < LOGOUT_COOLDOWN_MS) {
+        callback({});
+        return;
+      }
+      lastLogoutTime = now;
       writeSettings({ ...readSettings(), manualLogout: true });
       callback({});
       setTimeout(() => {
