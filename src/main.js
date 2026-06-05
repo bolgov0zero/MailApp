@@ -316,54 +316,27 @@ function buildAutoLoginScript(login, password) {
 }
 
 // --- Widget dismisser: auto-close "Interesting events" sidebar popup ---
-const WIDGET_DISMISSER = `
+// Widget dismisser runs inside the widgets.mail.ru iframe (not main page)
+// Injected via WebFrameMain.executeJavaScript from did-frame-finish-load
+const WIDGET_DISMISSER_IFRAME = `
   (function() {
     if (window.__mailapp_widget_dismisser__) return;
     window.__mailapp_widget_dismisser__ = true;
 
     function tryDismiss() {
-      // Strategy 1: find "Пропустить" button anywhere on the page
       for (const btn of document.querySelectorAll('button, [role="button"]')) {
-        if (btn.textContent?.trim() === 'Пропустить') {
-          btn.click();
-          return true;
-        }
-      }
-
-      // Strategy 2: find the widget container by title text, then click its close button
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        if (node.textContent?.includes('Интересные события')) {
-          // Walk up to find panel container (up to 8 levels)
-          let container = node.parentElement;
-          for (let i = 0; i < 8; i++) {
-            if (!container) break;
-            // Look for close button inside this container
-            for (const btn of container.querySelectorAll('button, [role="button"]')) {
-              const text  = btn.textContent?.trim();
-              const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-              if (text === '×' || text === '✕' || text === '✖' || text === '' && btn.querySelector('svg') ||
-                  label.includes('закрыт') || label.includes('close')) {
-                btn.click();
-                return true;
-              }
-            }
-            container = container.parentElement;
-          }
-        }
+        const text = btn.textContent?.trim();
+        if (text === 'Пропустить') { btn.click(); return true; }
       }
       return false;
     }
 
-    // Try immediately, then watch DOM for widget appearing
     if (!tryDismiss()) {
       const observer = new MutationObserver(() => {
         if (tryDismiss()) observer.disconnect();
       });
       observer.observe(document.documentElement, { childList: true, subtree: true });
-      // Stop after 60s to avoid lingering observers
-      setTimeout(() => observer.disconnect(), 60000);
+      setTimeout(() => observer.disconnect(), 30000);
     }
   })();
 `;
@@ -512,12 +485,7 @@ function createMainWindow() {
     return true;
   });
 
-  // Block calendar/widgets iframe — it causes cyclic page reloads when its
-  // backend is unreachable (ERR_CONNECTION_REFUSED from firewall etc.)
-  ses.webRequest.onBeforeRequest(
-    { urls: ['*://widgets.mail.ru/*', '*://touch.calendar.mail.ru/*', '*://calendarx.imgsmail.ru/*'] },
-    (details, callback) => callback({ cancel: true })
-  );
+
 
   // Intercept logout at the network level — fires before any navigation
   // Cooldown prevents repeated triggers during post-auth redirect chains
@@ -624,9 +592,38 @@ function createMainWindow() {
       .then(revealPage);
   });
 
+  // Block programmatic reloads caused by the calendar widget
+  // Pattern: widget initializes → navigates to /agenda/... → redirects back to /inbox → cycle
+  function shouldBlockCalendarNav(url) {
+    // Block agenda navigations (calendar widget trying to open its view)
+    if (/e\.mail\.ru\/agenda\//.test(url)) return true;
+    return false;
+  }
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = mainWindow.webContents.getURL();
+    const norm = u => u.split('?')[0].split('#')[0].replace(/\/$/, '');
+    // Block same-page reload
+    if (norm(currentUrl) === norm(url) && norm(url).includes('e.mail.ru')) {
+      event.preventDefault();
+      return;
+    }
+    // Block calendar agenda navigations
+    if (shouldBlockCalendarNav(url)) {
+      event.preventDefault();
+    }
+  });
+
+  mainWindow.webContents.on('will-redirect', (event, url) => {
+    if (shouldBlockCalendarNav(url)) {
+      event.preventDefault();
+    }
+  });
+
   // Task 3: retry on white screen (did-fail-load)
   let failRetryCount = 0;
-  mainWindow.webContents.on('did-fail-load', (e, code, desc, url) => {
+  mainWindow.webContents.on('did-fail-load', (e, code, desc, url, isMainFrame) => {
+    if (!isMainFrame) return; // ignore subframe/iframe failures — they must not trigger page reload
     if (code === -3) return; // ERR_ABORTED — deliberate navigation cancel, ignore
     if (failRetryCount < 3) {
       failRetryCount++;
@@ -669,8 +666,20 @@ function createMainWindow() {
 
     if (isMailPage) {
       mainWindow.webContents.executeJavaScript(UNREAD_POLLER);
-      mainWindow.webContents.executeJavaScript(WIDGET_DISMISSER);
     }
+  });
+
+  // Inject widget dismisser into widgets.mail.ru iframe when it finishes loading
+  mainWindow.webContents.on('did-frame-finish-load', (event, isMainFrame) => {
+    if (isMainFrame) return;
+    try {
+      const frames = mainWindow.webContents.mainFrame.framesInSubtree;
+      for (const frame of frames) {
+        if (frame.url && frame.url.includes('widgets.mail.ru')) {
+          frame.executeJavaScript(WIDGET_DISMISSER_IFRAME).catch(() => {});
+        }
+      }
+    } catch (e) {}
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
