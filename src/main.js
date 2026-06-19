@@ -624,9 +624,12 @@ function createMainWindow() {
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
     const currentUrl = mainWindow.webContents.getURL();
-    const norm = u => u.split('?')[0].split('#')[0].replace(/\/$/, '');
-    // Block same-page reload
-    if (norm(currentUrl) === norm(url) && norm(url).includes('e.mail.ru')) {
+    // Block ONLY a truly identical reload (same URL including query). Do NOT
+    // collapse by path: the post-auth "sota/next redirect" navigates
+    // /inbox?authid=... → /inbox?octavius-snr=1&... (same path, new query) and
+    // must be allowed, otherwise the page hangs with title "sota/next redirect".
+    const stripHash = u => u.split('#')[0];
+    if (stripHash(currentUrl) === stripHash(url) && url.includes('e.mail.ru')) {
       event.preventDefault();
       return;
     }
@@ -663,9 +666,14 @@ function createMainWindow() {
     if (url.startsWith('about:blank')) return false; // mid-recovery
     // The login UI (where we show an overlay / autologin) is not a hang.
     if (/id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(url)) return false;
-    // The mail app itself is e.mail.ru — never treat it as limbo (its white
-    // screens are handled by did-fail-load), to avoid reload loops.
-    if (/^https?:\/\/(e|win|my)\.mail\.ru/i.test(url)) return false;
+    // The mail app itself is e.mail.ru. Normally not a hang — BUT the post-auth
+    // redirect placeholder ("sota/next redirect" / "Перенаправление") lives on
+    // e.mail.ru and can get stuck. Treat it as limbo only while showing that
+    // placeholder title; the real inbox has a different title, so no loop.
+    if (/^https?:\/\/(e|win|my)\.mail\.ru/i.test(url)) {
+      const title = mainWindow.webContents.getTitle() || '';
+      return /sota|redirect|перенаправл/i.test(title);
+    }
     // Anything else is a transient auth-redirect host (o2.mail.ru,
     // account.mail.ru sota pages, auth.mail.ru, id.vk.ru intermediate, ...).
     return true;
