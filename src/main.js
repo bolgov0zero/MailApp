@@ -439,7 +439,18 @@ function createMainWindow() {
   // Task 2: after real download completes, offer to open the file
   mainWindow.webContents.session.on('will-download', (event, item) => {
     const name = item.getFilename() || '';
+    const dlUrl = item.getURL() || '';
     const hasExt = path.extname(name).length > 0;
+    // Auth/login redirect responses sometimes arrive as a "download" (octet-stream),
+    // producing a bogus save dialog titled e.g. "https://o2.mail.ru/login".
+    // Never treat auth endpoints as downloads — cancel and restart the mail load.
+    if (/o2\.mail\.ru|auth\.mail\.ru|id\.vk\.|account\.mail\.ru/i.test(dlUrl)) {
+      event.preventDefault();
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('https://e.mail.ru');
+      }, 300);
+      return;
+    }
     if (!hasExt && (name === '' || name === 'download')) {
       event.preventDefault();
       return;
@@ -621,6 +632,31 @@ function createMainWindow() {
     if (shouldBlockCalendarNav(url)) {
       event.preventDefault();
     }
+  });
+
+  // Watchdog: the auth flow passes through intermediate redirect pages on
+  // o2.mail.ru (e.g. "/sota/next") that occasionally hang — the JS redirect
+  // never fires and the window is stuck with that page title. Detect when we
+  // land on such a transient page and, if we're still there after a timeout,
+  // force a reload of e.mail.ru to restart the chain.
+  let authStuckTimer = null;
+  function isTransientAuthPage(url) {
+    return /o2\.mail\.ru/i.test(url) || /\/sota\//i.test(url);
+  }
+  function armAuthWatchdog(url) {
+    if (authStuckTimer) { clearTimeout(authStuckTimer); authStuckTimer = null; }
+    if (!isTransientAuthPage(url)) return;
+    authStuckTimer = setTimeout(() => {
+      authStuckTimer = null;
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      const cur = mainWindow.webContents.getURL();
+      // Still stuck on the same kind of transient auth page → recover.
+      if (isTransientAuthPage(cur)) mainWindow.loadURL('https://e.mail.ru');
+    }, 7000);
+  }
+  mainWindow.webContents.on('did-navigate', (e, url) => armAuthWatchdog(url));
+  mainWindow.webContents.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) armAuthWatchdog(url);
   });
 
   // Task 3: retry on white screen (did-fail-load)
