@@ -12,6 +12,14 @@ const GLOBAL_SETTINGS_PATH = process.platform === 'win32'
   ? path.join('C:\\ProgramData', 'MailApp', 'settings.json')
   : path.join(os.homedir(), '.mailapp', 'settings.json');
 
+const NAV_LOG_PATH = path.join(path.dirname(GLOBAL_SETTINGS_PATH), 'nav.log');
+function navLog(event, extra) {
+  try {
+    const line = `${new Date().toISOString()} [${event}] ${extra || ''}\n`;
+    fs.appendFileSync(NAV_LOG_PATH, line);
+  } catch (e) {}
+}
+
 const autoLauncher = new AutoLaunch({ name: 'MailApp' });
 
 let mainWindow;
@@ -643,34 +651,59 @@ function createMainWindow() {
   let authStuckTimer = null;
   let authRecoverCount = 0;
   const AUTH_RECOVER_MAX = 4;
-  function looksTransientAuth() {
+  const LIMBO_TIMEOUT_MS = 10000;
+  // "Limbo" = anything that is neither the real mail page nor the login UI we
+  // show an overlay on. The auth chain passes through several limbo redirect
+  // pages (e.g. title "sota/next redirect"); each should transition within a
+  // second or two. If we sit in limbo with no progress for LIMBO_TIMEOUT_MS,
+  // the chain has hung — recover by hard-reloading (like reopening the app).
+  function isLimbo() {
     if (!mainWindow || mainWindow.isDestroyed()) return false;
     const url = mainWindow.webContents.getURL() || '';
-    const title = mainWindow.webContents.getTitle() || '';
-    // Never treat the real mail page or the login UI as stuck.
-    const isLoginUI = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(url);
-    const isFinalMail = /e\.mail\.ru\/(inbox|messages|cabinet|tomail)/i.test(url);
-    if (isLoginUI || isFinalMail) return false;
-    return /\bsota\b/i.test(title) || /redirect/i.test(title) ||
-           /o2\.mail\.ru/i.test(url) || /\/sota\//i.test(url);
+    if (url.startsWith('about:blank')) return false; // mid-recovery
+    // The login UI (where we show an overlay / autologin) is not a hang.
+    if (/id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(url)) return false;
+    // The mail app itself is e.mail.ru — never treat it as limbo (its white
+    // screens are handled by did-fail-load), to avoid reload loops.
+    if (/^https?:\/\/(e|win|my)\.mail\.ru/i.test(url)) return false;
+    // Anything else is a transient auth-redirect host (o2.mail.ru,
+    // account.mail.ru sota pages, auth.mail.ru, id.vk.ru intermediate, ...).
+    return true;
   }
+  function recoverFromStuck() {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    navLog('RECOVER', `attempt=${authRecoverCount} url=${mainWindow.webContents.getURL()} title=${mainWindow.webContents.getTitle()}`);
+    // Hard reset like reopening the app: blank the renderer first, then reload.
+    mainWindow.loadURL('about:blank');
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('https://e.mail.ru');
+    }, 400);
+  }
+  // Refresh the limbo watchdog: cleared + re-armed on every progress event, so
+  // it only fires when we've been stuck in limbo with no progress.
   function checkAuthStuck() {
     if (authStuckTimer) { clearTimeout(authStuckTimer); authStuckTimer = null; }
-    if (!looksTransientAuth()) { authRecoverCount = 0; return; }
+    if (!isLimbo()) { authRecoverCount = 0; return; }
     authStuckTimer = setTimeout(() => {
       authStuckTimer = null;
       if (!mainWindow || mainWindow.isDestroyed()) return;
-      if (looksTransientAuth() && authRecoverCount < AUTH_RECOVER_MAX) {
+      if (isLimbo() && authRecoverCount < AUTH_RECOVER_MAX) {
         authRecoverCount++;
-        mainWindow.loadURL('https://e.mail.ru');
+        recoverFromStuck();
+      } else {
+        navLog('GIVEUP', `count=${authRecoverCount} stillLimbo=${isLimbo()}`);
       }
-    }, 6000);
+    }, LIMBO_TIMEOUT_MS);
   }
-  mainWindow.webContents.on('page-title-updated', () => checkAuthStuck());
+  mainWindow.webContents.on('page-title-updated', (e, title) => { navLog('TITLE', title); checkAuthStuck(); });
+  mainWindow.webContents.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => { if (isMainFrame) { navLog('START-NAV', url); checkAuthStuck(); } });
+  mainWindow.webContents.on('did-navigate', (e, url) => { navLog('DID-NAV', url); checkAuthStuck(); });
+  mainWindow.webContents.on('did-stop-loading', () => { navLog('STOP-LOADING', mainWindow.webContents.getURL()); checkAuthStuck(); });
 
   // Task 3: retry on white screen (did-fail-load)
   let failRetryCount = 0;
   mainWindow.webContents.on('did-fail-load', (e, code, desc, url, isMainFrame) => {
+    navLog('FAIL-LOAD', `mainFrame=${isMainFrame} code=${code} desc=${desc} url=${url}`);
     if (!isMainFrame) return; // ignore subframe/iframe failures — they must not trigger page reload
     if (code === -3) return; // ERR_ABORTED — deliberate navigation cancel, ignore
     if (failRetryCount < 3) {
@@ -698,6 +731,7 @@ function createMainWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     failRetryCount = 0; // reset on successful load
+    navLog('FINISH-LOAD', `url=${mainWindow.webContents.getURL()} title=${mainWindow.webContents.getTitle()}`);
     checkAuthStuck();
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
