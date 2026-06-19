@@ -634,30 +634,39 @@ function createMainWindow() {
     }
   });
 
-  // Watchdog: the auth flow passes through intermediate redirect pages on
-  // o2.mail.ru (e.g. "/sota/next") that occasionally hang — the JS redirect
-  // never fires and the window is stuck with that page title. Detect when we
-  // land on such a transient page and, if we're still there after a timeout,
-  // force a reload of e.mail.ru to restart the chain.
+  // Watchdog: the auth flow passes through intermediate redirect pages
+  // (page title "sota/next redirect") that occasionally hang — the page loads
+  // fully (white screen) but the JS redirect never fires, so the window is
+  // stuck. The transient page is identified by its TITLE, not its URL, so we
+  // detect it on did-finish-load / page-title-updated and, if we're still
+  // there after a short timeout, reload e.mail.ru to restart the chain.
   let authStuckTimer = null;
-  function isTransientAuthPage(url) {
-    return /o2\.mail\.ru/i.test(url) || /\/sota\//i.test(url);
+  let authRecoverCount = 0;
+  const AUTH_RECOVER_MAX = 4;
+  function looksTransientAuth() {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    const url = mainWindow.webContents.getURL() || '';
+    const title = mainWindow.webContents.getTitle() || '';
+    // Never treat the real mail page or the login UI as stuck.
+    const isLoginUI = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(url);
+    const isFinalMail = /e\.mail\.ru\/(inbox|messages|cabinet|tomail)/i.test(url);
+    if (isLoginUI || isFinalMail) return false;
+    return /\bsota\b/i.test(title) || /redirect/i.test(title) ||
+           /o2\.mail\.ru/i.test(url) || /\/sota\//i.test(url);
   }
-  function armAuthWatchdog(url) {
+  function checkAuthStuck() {
     if (authStuckTimer) { clearTimeout(authStuckTimer); authStuckTimer = null; }
-    if (!isTransientAuthPage(url)) return;
+    if (!looksTransientAuth()) { authRecoverCount = 0; return; }
     authStuckTimer = setTimeout(() => {
       authStuckTimer = null;
       if (!mainWindow || mainWindow.isDestroyed()) return;
-      const cur = mainWindow.webContents.getURL();
-      // Still stuck on the same kind of transient auth page → recover.
-      if (isTransientAuthPage(cur)) mainWindow.loadURL('https://e.mail.ru');
-    }, 7000);
+      if (looksTransientAuth() && authRecoverCount < AUTH_RECOVER_MAX) {
+        authRecoverCount++;
+        mainWindow.loadURL('https://e.mail.ru');
+      }
+    }, 6000);
   }
-  mainWindow.webContents.on('did-navigate', (e, url) => armAuthWatchdog(url));
-  mainWindow.webContents.on('did-start-navigation', (e, url, isInPlace, isMainFrame) => {
-    if (isMainFrame && !isInPlace) armAuthWatchdog(url);
-  });
+  mainWindow.webContents.on('page-title-updated', () => checkAuthStuck());
 
   // Task 3: retry on white screen (did-fail-load)
   let failRetryCount = 0;
@@ -689,6 +698,7 @@ function createMainWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     failRetryCount = 0; // reset on successful load
+    checkAuthStuck();
     const currentUrl = mainWindow.webContents.getURL();
     const isLoginPage = /id\.vk\.ru\/auth|account\.mail\.ru\/login/i.test(currentUrl);
     const isMailPage  = /e\.mail\.ru/i.test(currentUrl) && !isLoginPage;
