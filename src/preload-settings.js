@@ -16,4 +16,7 @@ contextBridge.exposeInMainWorld('mailappSettings', {
   minimize:         ()      => ipcRenderer.send('settings:minimize'),
   close:            ()      => ipcRenderer.send('settings:close'),
   onUpdateDownloaded: (cb)  => ipcRenderer.on('update:downloaded', cb),
+  getDiagnostics:   ()        => ipcRenderer.invoke('settings:getDiagnostics'),
+  setLogging:       (enabled) => ipcRenderer.invoke('settings:setLogging', enabled),
+  openLogsFolder:   ()        => ipcRenderer.invoke('settings:openLogsFolder'),
 });

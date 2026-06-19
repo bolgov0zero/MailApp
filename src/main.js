@@ -12,9 +12,16 @@ const GLOBAL_SETTINGS_PATH = process.platform === 'win32'
   ? path.join('C:\\ProgramData', 'MailApp', 'settings.json')
   : path.join(os.homedir(), '.mailapp', 'settings.json');
 
-const NAV_LOG_PATH = path.join(path.dirname(GLOBAL_SETTINGS_PATH), 'nav.log');
+const LOG_DIR = path.dirname(GLOBAL_SETTINGS_PATH);
+const NAV_LOG_PATH = path.join(LOG_DIR, 'nav.log');
+// Diagnostics logging is opt-in via settings (default enabled). Cached so
+// navLog stays cheap; updated when the toggle changes.
+let loggingEnabled = (() => { try { return readSettings().diagnostics !== false; } catch (e) { return true; } })();
 function navLog(event, extra) {
+  if (!loggingEnabled) return;
   try {
+    const dir = path.dirname(NAV_LOG_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const line = `${new Date().toISOString()} [${event}] ${extra || ''}\n`;
     fs.appendFileSync(NAV_LOG_PATH, line);
   } catch (e) {}
@@ -942,6 +949,7 @@ ipcMain.handle('settings:load', () => {
 
 ipcMain.handle('settings:save', async (_, { settings, auth }) => {
   const settingsOk = writeSettings({
+    ...readSettings(),   // preserve other keys (diagnostics, windowBounds, ...)
     ...settings,
     authLogin: auth.login || '',
     manualLogout: false,  // clear on profile save so relogin works
@@ -995,6 +1003,27 @@ ipcMain.handle('settings:deleteProfile', (_, { drive, login }) => {
 });
 
 ipcMain.handle('settings:openExternal', (_, url) => { shell.openExternal(url); });
+
+// ── Diagnostics ──
+ipcMain.handle('settings:getDiagnostics', () => {
+  return { logging: loggingEnabled, logDir: LOG_DIR };
+});
+ipcMain.handle('settings:setLogging', (_, enabled) => {
+  loggingEnabled = !!enabled;
+  writeSettings({ ...readSettings(), diagnostics: loggingEnabled });
+  return { ok: true, logging: loggingEnabled };
+});
+ipcMain.handle('settings:openLogsFolder', () => {
+  try {
+    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    // Reveal the nav.log file if it exists, otherwise open the folder.
+    if (fs.existsSync(NAV_LOG_PATH)) shell.showItemInFolder(NAV_LOG_PATH);
+    else shell.openPath(LOG_DIR);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
 ipcMain.on('settings:close',    () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
 ipcMain.on('settings:minimize', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.minimize(); });;
 ipcMain.on('main:openSettings',         () => { openSettings(); });

@@ -523,6 +523,21 @@
         <div class="hint" style="margin-top:12px">
           Найденное обновление скачивается автоматически. После загрузки приложение перезапустится и установит новую версию.
         </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-label">Диагностика</div>
+          <div class="toggle-row">
+            <span>Вести журнал диагностики</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="chkLogging" />
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div class="hint" style="margin-top:10px">
+            Записывает события навигации в файл <code>nav.log</code>. Помогает выявлять проблемы при авторизации.
+          </div>
+          <button class="btn btn-ghost" id="btnOpenLogs" style="margin-top:12px">Открыть папку с логами</button>
+        </div>
       </div>
       <div class="panel-footer">
         <div class="spacer"></div>
@@ -805,6 +820,17 @@
   api.onUpdateProgress(pct => {
     document.getElementById('updateStatus').textContent = 'Скачивание... ' + pct + '%';
     document.getElementById('btnUpdate').textContent = pct + '%';
+  });
+
+  // ── Diagnostics ──
+  api.getDiagnostics().then(({ logging }) => {
+    document.getElementById('chkLogging').checked = !!logging;
+  });
+  document.getElementById('chkLogging').addEventListener('change', (e) => {
+    api.setLogging(e.target.checked);
+  });
+  document.getElementById('btnOpenLogs').addEventListener('click', () => {
+    api.openLogsFolder();
   });
 
   function showAlert(type, msg) {
