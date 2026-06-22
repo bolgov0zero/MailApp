@@ -1115,13 +1115,19 @@ async function handleUpdateCommand() {
   }
 }
 function triggerManagedUpdate() {
-  // Preferred path on Windows: run the SYSTEM scheduled task "MailAppUpdater",
-  // which installs into Program Files without a UAC prompt. If the task is not
-  // present (service not installed), fall back to electron-updater.
+  // Preferred path on Windows: drop a flag file that the SYSTEM scheduled task
+  // "MailAppUpdater" (running every minute) picks up and installs without a UAC
+  // prompt. Writing the flag needs no privileges, unlike "schtasks /run" which
+  // a standard user cannot use on a SYSTEM task. If the task is absent, fall
+  // back to electron-updater (which will prompt for UAC on a perMachine app).
   if (process.platform === 'win32') {
     const { execFile } = require('child_process');
-    execFile('schtasks', ['/run', '/tn', 'MailAppUpdater'], (err) => {
-      if (err) fallbackUpdate();
+    execFile('schtasks', ['/query', '/tn', 'MailAppUpdater'], (err) => {
+      if (err) { fallbackUpdate(); return; }
+      try {
+        if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+        fs.writeFileSync(path.join(LOG_DIR, 'update.flag'), new Date().toISOString());
+      } catch (e) { fallbackUpdate(); }
     });
     return;
   }

@@ -11,8 +11,11 @@
 ;   present; it is never added without the user's choice (/SD IDNO).
 
 !macro registerUpdateTask
-  ; /rl HIGHEST + /ru SYSTEM => runs elevated as SYSTEM, no UAC at update time.
-  nsExec::Exec 'schtasks /create /tn "MailAppUpdater" /tr "\"$INSTDIR\MailApp.exe\" --run-update" /sc ONCE /st 00:00 /ru SYSTEM /rl HIGHEST /f'
+  ; Runs every minute as SYSTEM (/ru SYSTEM /rl HIGHEST). The runner does nothing
+  ; unless a flag file is present, so a standard user cannot (and need not) call
+  ; "schtasks /run" — it just drops the flag and the SYSTEM task picks it up.
+  ; This avoids both the UAC prompt and the "access denied" on /run.
+  nsExec::Exec 'schtasks /create /tn "MailAppUpdater" /tr "\"$INSTDIR\MailApp.exe\" --run-update" /sc MINUTE /mo 1 /ru SYSTEM /rl HIGHEST /f'
 !macroend
 
 !macro customInstall

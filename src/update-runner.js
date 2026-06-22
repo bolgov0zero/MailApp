@@ -17,10 +17,11 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const REPO = 'bolgov0zero/MailApp';
-const LOG_PATH = path.join(
-  process.platform === 'win32' ? 'C:\\ProgramData\\MailApp' : os.tmpdir(),
-  'update-runner.log'
-);
+const DATA_DIR = process.platform === 'win32' ? 'C:\\ProgramData\\MailApp' : os.tmpdir();
+const LOG_PATH = path.join(DATA_DIR, 'update-runner.log');
+// The scheduled task fires every minute; it only updates when this flag exists.
+// The (unprivileged) client drops the flag; this SYSTEM task consumes it.
+const FLAG_PATH = path.join(DATA_DIR, 'update.flag');
 
 function log(msg) {
   try {
@@ -84,4 +85,10 @@ async function run() {
   }
 }
 
+// Only act when the client requested an update (flag present). Otherwise this
+// is just the every-minute tick — exit immediately.
+if (!fs.existsSync(FLAG_PATH)) {
+  process.exit(0);
+}
+try { fs.unlinkSync(FLAG_PATH); } catch (e) {}
 run();
