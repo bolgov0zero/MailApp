@@ -80,6 +80,31 @@ if (!admin_logged_in()) {
     exit;
 }
 
+// ── AJAX: clients JSON (polled every 10s by the dashboard) ─────────
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'clients') {
+    $offlineAfter = (int) cfg('offline_after');
+    $rows = $pdo->query('SELECT * FROM clients ORDER BY hostname COLLATE NOCASE ASC, id ASC')->fetchAll();
+    $out = [];
+    foreach ($rows as $c) {
+        $t = $c['last_seen'] ? strtotime($c['last_seen']) : 0;
+        $out[] = [
+            'id'              => (int) $c['id'],
+            'online'          => ($t && (time() - $t) <= $offlineAfter),
+            'hostname'        => $c['hostname'],
+            'local_ip'        => $c['local_ip'],
+            'version'         => $c['version'],
+            'profile'         => $c['profile'],
+            'last_seen'       => $c['last_seen'],
+            'pending_update'  => (int) $c['pending_update'],
+            'last_message'    => $c['last_message'],
+            'last_message_at' => $c['last_message_at'],
+        ];
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($out);
+    exit;
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────
 $offlineAfter = (int) cfg('offline_after');
 $clients = $pdo->query('SELECT * FROM clients ORDER BY hostname COLLATE NOCASE ASC, id ASC')->fetchAll();
@@ -107,33 +132,11 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
   <?php if ($msg): ?><div class="flash"><?= h($msg) ?></div><?php endif; ?>
 
   <section class="card">
-    <h2>Клиенты <span class="count"><?= count($clients) ?></span></h2>
+    <h2>Клиенты <span class="count" id="clientCount">…</span> <span class="dim" id="refreshTick" style="margin-left:auto;font-weight:400"></span></h2>
     <table>
-      <thead><tr><th>Статус</th><th>Имя ПК</th><th>Локальный IP</th><th>Версия</th><th>Профиль</th><th>Последний контакт</th><th>Действия</th></tr></thead>
-      <tbody>
-      <?php if (!$clients): ?>
-        <tr><td colspan="7" class="empty">Пока нет подключённых клиентов</td></tr>
-      <?php endif; ?>
-      <?php foreach ($clients as $c):
-        $online = is_online($c['last_seen'], $offlineAfter); ?>
-        <tr>
-          <td><span class="dot <?= $online ? 'on' : 'off' ?>"></span><?= $online ? 'онлайн' : 'офлайн' ?></td>
-          <td class="mono"><?= h($c['hostname'] ?: '—') ?></td>
-          <td class="mono"><?= h($c['local_ip'] ?: '—') ?></td>
-          <td><?= h($c['version'] ?: '—') ?></td>
-          <td><?= h($c['profile'] ?: '—') ?></td>
-          <td class="dim"><?= h($c['last_seen'] ?: '—') ?></td>
-          <td class="actions">
-            <?php if ($c['pending_update']): ?>
-              <span class="badge">обновление в очереди</span>
-              <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="cancel_update"><input type="hidden" name="id" value="<?= (int)$c['id'] ?>"><button class="btn-sm ghost">Отменить</button></form>
-            <?php else: ?>
-              <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="update_client"><input type="hidden" name="id" value="<?= (int)$c['id'] ?>"><button class="btn-sm">Обновить</button></form>
-            <?php endif; ?>
-            <form method="post" onsubmit="return confirm('Удалить клиента из списка?')"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="delete_client"><input type="hidden" name="id" value="<?= (int)$c['id'] ?>"><button class="btn-sm danger">✕</button></form>
-          </td>
-        </tr>
-      <?php endforeach; ?>
+      <thead><tr><th>Статус</th><th>Имя ПК</th><th>Локальный IP</th><th>Версия</th><th>Профиль</th><th>Сообщение</th><th>Последний контакт</th><th>Действия</th></tr></thead>
+      <tbody id="clientsBody">
+        <tr><td colspan="8" class="empty">Загрузка…</td></tr>
       </tbody>
     </table>
   </section>
@@ -173,4 +176,48 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
     <p class="hint">Код содержит зашифрованный адрес сервера. Пересоздание/удаление кода не отключает уже подключённые клиенты — они работают по своему постоянному токену.</p>
   </section>
 </main>
+<script>
+const CSRF = <?= json_encode($csrf) ?>;
+function esc(s){ const d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+function cForm(action,id,inner,confirmJs){
+  return '<form method="post"'+(confirmJs?(' onsubmit="'+confirmJs+'"'):'')+'>'
+    +'<input type="hidden" name="csrf" value="'+esc(CSRF)+'">'
+    +'<input type="hidden" name="action" value="'+action+'">'
+    +'<input type="hidden" name="id" value="'+id+'">'+inner+'</form>';
+}
+function clientRow(c){
+  const dot='<span class="dot '+(c.online?'on':'off')+'"></span>'+(c.online?'онлайн':'офлайн');
+  let act='';
+  if(c.pending_update){
+    act+='<span class="badge">обновление в очереди</span>';
+    act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>');
+  }else{
+    act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>');
+  }
+  act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
+  const msg=c.last_message?esc(c.last_message):'<span class="dim">—</span>';
+  return '<tr>'
+    +'<td>'+dot+'</td>'
+    +'<td class="mono">'+esc(c.hostname||'—')+'</td>'
+    +'<td class="mono">'+esc(c.local_ip||'—')+'</td>'
+    +'<td>'+esc(c.version||'—')+'</td>'
+    +'<td>'+esc(c.profile||'—')+'</td>'
+    +'<td>'+msg+'</td>'
+    +'<td class="dim">'+esc(c.last_seen||'—')+'</td>'
+    +'<td class="actions">'+act+'</td>'
+    +'</tr>';
+}
+async function refreshClients(){
+  try{
+    const r=await fetch('index.php?ajax=clients',{cache:'no-store'});
+    const list=await r.json();
+    const body=document.getElementById('clientsBody');
+    document.getElementById('clientCount').textContent=list.length;
+    body.innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="8" class="empty">Пока нет подключённых клиентов</td></tr>';
+    document.getElementById('refreshTick').textContent='обновлено '+new Date().toLocaleTimeString();
+  }catch(e){}
+}
+refreshClients();
+setInterval(refreshClients,10000);
+</script>
 </body></html>

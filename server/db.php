@@ -27,9 +27,16 @@ function db() {
             profile        TEXT DEFAULT '',
             pending_update INTEGER NOT NULL DEFAULT 0,
             created_at     TEXT DEFAULT '',
-            last_seen      TEXT DEFAULT ''
+            last_seen      TEXT DEFAULT '',
+            last_message   TEXT DEFAULT '',
+            last_message_at TEXT DEFAULT ''
         )
     ");
+    // Migrations for DBs created by earlier versions (ignore if column exists).
+    foreach (['last_message TEXT', 'last_message_at TEXT'] as $col) {
+        try { $pdo->exec("ALTER TABLE clients ADD COLUMN $col DEFAULT ''"); } catch (Exception $e) {}
+    }
+
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS connect_codes (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,

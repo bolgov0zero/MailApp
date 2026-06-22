@@ -67,6 +67,19 @@ if ($action === 'heartbeat') {
         $client['id'],
     ]);
 
+    // Optional status report from a previous update command.
+    if (isset($in['report']) && $in['report'] !== '') {
+        $messages = [
+            'up_to_date' => 'Уже актуальная версия',
+            'updating'   => 'Обновление запущено',
+            'error'      => 'Ошибка обновления',
+        ];
+        $code = clean_str($in['report'], 32);
+        $msg = isset($messages[$code]) ? $messages[$code] : $code;
+        $pdo->prepare('UPDATE clients SET last_message=?, last_message_at=? WHERE id=?')
+            ->execute([$msg, now(), $client['id']]);
+    }
+
     $command = null;
     if (!empty($client['pending_update'])) {
         $command = 'update';

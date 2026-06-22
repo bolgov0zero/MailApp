@@ -20,9 +20,9 @@ const https = require('https');
 const { URL } = require('url');
 
 // MUST be identical to `connect_secret` in the server's config.php.
-const CONNECT_SECRET = 'CHANGE-ME-to-a-long-random-shared-secret';
+const CONNECT_SECRET = '_jXnGmq1caEZ_mr7vh4mpFKh5HMgcYr4K-A0QH7JHamxom7C';
 
-const HEARTBEAT_MS = 60 * 1000;
+const HEARTBEAT_MS = 10 * 1000;
 
 let deps = null;        // { readSettings, writeSettings, getVersion, getProfile, onUpdateCommand }
 let timer = null;
@@ -162,11 +162,26 @@ async function beat() {
     lastBeat = new Date().toISOString();
     lastError = null;
     if (res && res.ok && res.command === 'update') {
-      try { deps.onUpdateCommand(); } catch (e) {}
+      Promise.resolve()
+        .then(() => deps.onUpdateCommand())
+        .then((status) => sendReport(status || 'updating'))
+        .catch(() => sendReport('error'));
     }
   } catch (e) {
     lastError = 'Нет связи с сервером';
   }
+}
+
+// Report the outcome of an update command back to the server (shown in admin).
+function sendReport(status) {
+  const srv = getServer();
+  if (!srv || !srv.deviceToken) return;
+  postJson(srv.url, {
+    action: 'heartbeat',
+    device_token: srv.deviceToken,
+    ...inventory(),
+    report: status,
+  }).catch(() => {});
 }
 
 function start() {

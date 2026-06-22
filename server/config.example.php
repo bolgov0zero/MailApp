@@ -16,15 +16,16 @@ return [
     'server_url' => 'http://CHANGE-ME',
 
     // Shared secret used to encrypt/decrypt connection codes.
-    // MUST be identical to CONNECT_SECRET baked into the client (src/main.js).
-    // Use a long random string. Changing it invalidates all existing codes
-    // (already-paired clients keep working — they use their device token).
-    'connect_secret' => 'CHANGE-ME-to-a-long-random-shared-secret',
+    // MUST be identical to CONNECT_SECRET baked into the client
+    // (src/server-link.js). Pre-filled to match the shipped client build.
+    // Changing it invalidates existing codes (paired clients keep working —
+    // they use their device token) and requires rebuilding the client.
+    'connect_secret' => '_jXnGmq1caEZ_mr7vh4mpFKh5HMgcYr4K-A0QH7JHamxom7C',
 
     // Password for the admin web panel.
     'admin_password' => 'CHANGE-ME',
 
     // A client is shown "online" if its last heartbeat is within this many
-    // seconds. Should be a few times the client heartbeat interval.
-    'offline_after' => 120,
+    // seconds. Should be a few times the client heartbeat interval (10s).
+    'offline_after' => 30,
 ];

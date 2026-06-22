@@ -1068,6 +1068,52 @@ function fallbackUpdate() {
   managedUpdatePending = true;
   autoUpdater.checkForUpdates().catch(() => { managedUpdatePending = false; });
 }
+
+// Fetch the latest published version tag from GitHub (e.g. "1.7.8").
+function fetchLatestVersion() {
+  return new Promise((resolve) => {
+    const https = require('https');
+    https.get(
+      'https://api.github.com/repos/bolgov0zero/MailApp/releases/latest',
+      { headers: { 'User-Agent': 'MailApp', 'Accept': 'application/vnd.github+json' } },
+      (res) => {
+        let data = '';
+        res.on('data', (c) => (data += c));
+        res.on('end', () => {
+          try { resolve(String(JSON.parse(data).tag_name || '').replace(/^v/, '')); }
+          catch (e) { resolve(null); }
+        });
+      }
+    ).on('error', () => resolve(null));
+  });
+}
+
+// Numeric semver compare: true if a > b.
+function isVersionNewer(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
+
+// Handle an "update" command from the management server. Returns a status that
+// the client reports back so the admin sees the result ("up_to_date" when the
+// installed version is already current).
+async function handleUpdateCommand() {
+  try {
+    const latest = await fetchLatestVersion();
+    if (latest && isVersionNewer(latest, app.getVersion())) {
+      triggerManagedUpdate();
+      return 'updating';
+    }
+    return 'up_to_date';
+  } catch (e) {
+    return 'error';
+  }
+}
 function triggerManagedUpdate() {
   // Preferred path on Windows: run the SYSTEM scheduled task "MailAppUpdater",
   // which installs into Program Files without a UAC prompt. If the task is not
@@ -1106,7 +1152,7 @@ app.whenReady().then(() => {
     writeSettings,
     getVersion: () => app.getVersion(),
     getProfile: () => readSettings().authLogin || '',
-    onUpdateCommand: triggerManagedUpdate,
+    onUpdateCommand: handleUpdateCommand,
   });
   serverLink.start();
   if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {});
