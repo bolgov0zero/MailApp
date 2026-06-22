@@ -150,21 +150,29 @@ function Invoke-Update($srv, $currentVer) {
 }
 
 function Relaunch-App {
+  # Native commands writing to stderr must NOT become terminating errors here
+  # (e.g. schtasks emits ERROR text that, under 'Stop', aborts the relaunch).
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
     $exe = Get-AppExe
     $user = $null
     try { $user = (Get-CimInstance Win32_ComputerSystem).UserName } catch {}
     if (-not $user) {
-      try { $user = (Get-Process explorer -IncludeUserName -ErrorAction Stop | Select-Object -First 1).UserName } catch {}
+      try { $user = (Get-Process explorer -IncludeUserName -ErrorAction SilentlyContinue | Select-Object -First 1).UserName } catch {}
     }
     if (-not $user) { Log 'relaunch: no interactive user found'; return }
     Log "relaunch: user=$user exe=$exe"
-    schtasks /delete /tn 'MailAppLaunch' /f 2>&1 | Out-Null
-    $c = schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /rl LIMITED /f 2>&1
-    Log "relaunch create: $c"
-    $r = schtasks /run /tn 'MailAppLaunch' 2>&1
-    Log "relaunch run: $r"
-  } catch { Log "relaunch error: $($_.Exception.Message)" }
+    # /f overwrites any existing task, so no pre-delete is needed.
+    $c = & schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /rl LIMITED /f 2>&1
+    Log "relaunch create (exit $LASTEXITCODE): $c"
+    $r = & schtasks /run /tn 'MailAppLaunch' 2>&1
+    Log "relaunch run (exit $LASTEXITCODE): $r"
+  } catch {
+    Log "relaunch error: $($_.Exception.Message)"
+  } finally {
+    $ErrorActionPreference = $prev
+  }
 }
 
 # ── main loop ──────────────────────────────────────────────────────
