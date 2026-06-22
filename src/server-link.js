@@ -104,7 +104,9 @@ function getServer() {
 }
 
 function setServer(server) {
-  deps.writeSettings({ ...deps.readSettings(), server });
+  // writeSettings returns false if it could not persist (e.g. no write access
+  // to C:\ProgramData\MailApp). Surface that instead of silently "connecting".
+  return deps.writeSettings({ ...deps.readSettings(), server });
 }
 
 // ── pairing (called from settings UI) ──────────────────────────────
@@ -122,7 +124,9 @@ async function connect(code) {
     if (!res || !res.ok || !res.device_token) {
       return { ok: false, error: res && res.error === 'invalid_code' ? 'Код не найден на сервере' : 'Сервер отклонил подключение' };
     }
-    setServer({ url: decoded.url, deviceToken: res.device_token });
+    if (!setServer({ url: decoded.url, deviceToken: res.device_token })) {
+      return { ok: false, error: 'Нет прав на сохранение настроек (C:\\ProgramData\\MailApp). Переустановите приложение.' };
+    }
     lastError = null;
     start();           // (re)start heartbeat
     beat();            // immediate first beat
