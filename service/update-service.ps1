@@ -132,23 +132,39 @@ function Invoke-Update($srv, $currentVer) {
   Log "installer exit code: $($p.ExitCode)"
 
   if ($wasRunning) {
-    # Relaunch the app in the logged-on user's interactive session (a silent
-    # SYSTEM install does not start the GUI; the service is in session 0).
+    # Relaunch only if the app was running before the update (otherwise leave it
+    # closed). A silent SYSTEM install does not start the GUI and the service is
+    # in session 0, so we relaunch via an interactive (/it) one-off task.
     try { Send-Heartbeat $srv $currentVer 'launching' | Out-Null } catch {}
-    try {
-      $user = (Get-CimInstance Win32_ComputerSystem).UserName
-      if ($user) {
-        $exe = Get-AppExe
-        Log "relaunching app for user $user : $exe"
-        schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /f | Out-Null
-        schtasks /run /tn 'MailAppLaunch' | Out-Null
-      } else {
-        Log 'no interactive user; skipping relaunch'
-      }
-    } catch { Log "relaunch error: $($_.Exception.Message)" }
+    Relaunch-App
   } else {
     Log 'app was not running; not relaunching'
   }
+
+  # Final status: the app is now up to date.
+  try {
+    $newVer = Get-AppVersion (Get-AppExe)
+    Send-Heartbeat $srv $newVer 'up_to_date' | Out-Null
+    Log "update complete, now $newVer"
+  } catch {}
+}
+
+function Relaunch-App {
+  try {
+    $exe = Get-AppExe
+    $user = $null
+    try { $user = (Get-CimInstance Win32_ComputerSystem).UserName } catch {}
+    if (-not $user) {
+      try { $user = (Get-Process explorer -IncludeUserName -ErrorAction Stop | Select-Object -First 1).UserName } catch {}
+    }
+    if (-not $user) { Log 'relaunch: no interactive user found'; return }
+    Log "relaunch: user=$user exe=$exe"
+    schtasks /delete /tn 'MailAppLaunch' /f 2>&1 | Out-Null
+    $c = schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /rl LIMITED /f 2>&1
+    Log "relaunch create: $c"
+    $r = schtasks /run /tn 'MailAppLaunch' 2>&1
+    Log "relaunch run: $r"
+  } catch { Log "relaunch error: $($_.Exception.Message)" }
 }
 
 # ── main loop ──────────────────────────────────────────────────────

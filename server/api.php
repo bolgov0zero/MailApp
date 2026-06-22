@@ -74,7 +74,7 @@ if ($action === 'heartbeat') {
     // Optional status report from a previous update command (sent by service).
     if (isset($in['report']) && $in['report'] !== '') {
         $messages = [
-            'up_to_date'  => 'Уже актуальная версия',
+            'up_to_date'  => 'Актуально',
             'downloading' => 'Загрузка',
             'installing'  => 'Обновление',
             'launching'   => 'Запуск',
