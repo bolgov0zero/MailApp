@@ -405,7 +405,7 @@ const UNREAD_POLLER = `
 // --- App icon as base64 (for injection into web pages) ---
 const APP_ICON_B64 = (() => {
   try {
-    const p = path.join(__dirname, '..', 'icon.png');
+    const p = path.join(__dirname, '..', 'assets', 'icon.png');
     return 'data:image/png;base64,' + fs.readFileSync(p).toString('base64');
   } catch { return ''; }
 })();
