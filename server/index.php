@@ -174,12 +174,12 @@ function is_online($lastSeen, $offlineAfter) {
             <td><?= h($code['label'] ?: 'Без метки') ?></td>
             <td class="code-cell"><span class="code-text mono trunc" id="code<?= $i ?>"><?= h($display) ?></span></td>
             <td class="dim ts" data-ts="<?= h($code['created_at']) ?>"><?= h($code['created_at']) ?></td>
-            <td class="actions">
+            <td><div class="actions">
               <button class="btn-sm" type="button" onclick="copyText('<?= h($display) ?>')">Копировать</button>
               <button class="btn-sm ghost" type="button" onclick="toggleBox('code<?= $i ?>',this)">Показать</button>
               <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="regen_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm ghost">Пересоздать</button></form>
               <form method="post" onsubmit="return confirm('Удалить код?')"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="delete_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm danger">✕</button></form>
-            </td>
+            </div></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
@@ -253,7 +253,7 @@ function clientRow(c){
     +'<td class="t-prof trunc" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</td>'
     +'<td>'+upd+'</td>'
     +'<td class="dim">'+fmtTs(c.last_seen)+'</td>'
-    +'<td class="actions">'+act+'</td>'
+    +'<td><div class="actions">'+act+'</div></td>'
     +'</tr>';
 }
 async function refreshClients(){
