@@ -5,3 +5,9 @@ out/
 *.log
 .DS_Store
 Thumbs.db
+
+# Server runtime data / local config (never committed; live in server root)
+server/config.php
+server/mailapp.db
+server/mailapp.db-wal
+server/mailapp.db-shm

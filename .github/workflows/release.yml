@@ -42,6 +42,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:publish
 
+      - name: Package management server (MailAppServer.zip)
+        shell: pwsh
+        run: |
+          $stage = "server-pkg"
+          if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item -Path "server\*" -Destination $stage -Recurse -Force
+          # Never ship live data or local config — only the code + example config.
+          Remove-Item -Path "$stage\config.php"  -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "$stage\mailapp.db*" -Force -ErrorAction SilentlyContinue
+          if (Test-Path MailAppServer.zip) { Remove-Item MailAppServer.zip -Force }
+          Compress-Archive -Path "$stage\*" -DestinationPath MailAppServer.zip -Force
+
+      - name: Upload server zip to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" MailAppServer.zip --clobber
+
       - name: Publish release as Latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,6 +6,15 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const zlib = require('zlib');
+const serverLink = require('./server-link');
+
+// Headless update mode: launched as "MailApp.exe --run-update", normally by the
+// SYSTEM scheduled task so it can install into Program Files without UAC. Runs
+// the updater and never shows the GUI.
+if (process.argv.includes('--run-update')) {
+  require('./update-runner');
+  return;
+}
 
 // Global settings — system-wide on Windows (all users), user-local elsewhere
 const GLOBAL_SETTINGS_PATH = process.platform === 'win32'
@@ -1024,6 +1033,11 @@ ipcMain.handle('settings:openLogsFolder', () => {
     return { ok: false, error: e.message };
   }
 });
+// ── Management server ──
+ipcMain.handle('settings:serverStatus',     ()      => serverLink.status());
+ipcMain.handle('settings:serverConnect',    (_, code) => serverLink.connect(code));
+ipcMain.handle('settings:serverDisconnect', ()      => serverLink.disconnect());
+
 ipcMain.on('settings:close',    () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.close(); });
 ipcMain.on('settings:minimize', () => { if (settingsWindow && !settingsWindow.isDestroyed()) settingsWindow.minimize(); });;
 ipcMain.on('main:openSettings',         () => { openSettings(); });
@@ -1039,6 +1053,34 @@ ipcMain.on('main:openFile',     (_, filePath) => { shell.openPath(filePath); });
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
+
+// Update triggered by a management-server command. The binary still comes from
+// the hard-coded GitHub feed — the server only sends a trigger, never a URL.
+let managedUpdatePending = false;
+autoUpdater.on('update-available', () => {
+  if (managedUpdatePending) {
+    managedUpdatePending = false;
+    autoUpdater.downloadUpdate().catch(() => {});
+  }
+});
+function fallbackUpdate() {
+  if (!app.isPackaged) return;
+  managedUpdatePending = true;
+  autoUpdater.checkForUpdates().catch(() => { managedUpdatePending = false; });
+}
+function triggerManagedUpdate() {
+  // Preferred path on Windows: run the SYSTEM scheduled task "MailAppUpdater",
+  // which installs into Program Files without a UAC prompt. If the task is not
+  // present (service not installed), fall back to electron-updater.
+  if (process.platform === 'win32') {
+    const { execFile } = require('child_process');
+    execFile('schtasks', ['/run', '/tn', 'MailAppUpdater'], (err) => {
+      if (err) fallbackUpdate();
+    });
+    return;
+  }
+  fallbackUpdate();
+}
 
 autoUpdater.on('download-progress', (progress) => {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -1059,6 +1101,14 @@ ipcMain.handle('settings:downloadAndInstall', () => {
 
 app.whenReady().then(() => {
   createMainWindow();
+  serverLink.init({
+    readSettings,
+    writeSettings,
+    getVersion: () => app.getVersion(),
+    getProfile: () => readSettings().authLogin || '',
+    onUpdateCommand: triggerManagedUpdate,
+  });
+  serverLink.start();
   if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {});
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

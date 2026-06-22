@@ -525,6 +525,23 @@
         </div>
 
         <div class="card" style="margin-top:20px">
+          <div class="card-label">Сервер управления</div>
+          <div id="srvStatusRow" style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px">
+            <span id="srvDot" style="width:9px;height:9px;border-radius:50%;background:#cfcfe0;display:inline-block"></span>
+            <span id="srvStatusText" style="color:#5a5a88">Не подключён</span>
+          </div>
+          <div class="field">
+            <label>Код подключения</label>
+            <input type="text" id="srvCode" placeholder="Вставьте код из админки сервера" autocomplete="off" />
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary" id="btnSrvConnect">Подключить</button>
+            <button class="btn btn-ghost" id="btnSrvDisconnect" style="display:none">Отключить</button>
+          </div>
+          <div class="hint" id="srvInfo" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
           <div class="card-label">Диагностика</div>
           <div class="toggle-row">
             <span>Вести журнал диагностики</span>
@@ -831,6 +848,56 @@
   });
   document.getElementById('btnOpenLogs').addEventListener('click', () => {
     api.openLogsFolder();
+  });
+
+  // ── Management server ──
+  function renderServer(st) {
+    const dot = document.getElementById('srvDot');
+    const txt = document.getElementById('srvStatusText');
+    const info = document.getElementById('srvInfo');
+    const btnC = document.getElementById('btnSrvConnect');
+    const btnD = document.getElementById('btnSrvDisconnect');
+    const codeInput = document.getElementById('srvCode');
+    if (st && st.connected) {
+      dot.style.background = '#3bbf6a';
+      txt.textContent = 'Подключён к серверу';
+      btnC.textContent = 'Переподключить';
+      btnD.style.display = '';
+      codeInput.placeholder = 'Введите новый код, чтобы сменить сервер';
+      const parts = [];
+      if (st.profile) parts.push('Профиль: ' + st.profile);
+      if (st.version) parts.push('Версия: ' + st.version);
+      if (st.lastError) parts.push('⚠ ' + st.lastError);
+      info.textContent = parts.join('  ·  ');
+    } else {
+      dot.style.background = '#cfcfe0';
+      txt.textContent = 'Не подключён';
+      btnC.textContent = 'Подключить';
+      btnD.style.display = 'none';
+      info.textContent = 'Обновлениями управляет сервер. Без подключения обновления берутся напрямую с GitHub.';
+    }
+  }
+  api.serverStatus().then(renderServer);
+  document.getElementById('btnSrvConnect').addEventListener('click', async () => {
+    const btn = document.getElementById('btnSrvConnect');
+    const code = document.getElementById('srvCode').value.trim();
+    if (!code) { showAlert('error', 'Введите код подключения'); return; }
+    btn.disabled = true; btn.textContent = 'Подключение...';
+    const res = await api.serverConnect(code);
+    btn.disabled = false;
+    if (res.ok) {
+      document.getElementById('srvCode').value = '';
+      showAlert('success', 'Подключено к серверу управления');
+      renderServer(await api.serverStatus());
+    } else {
+      showAlert('error', res.error || 'Не удалось подключиться');
+      renderServer(await api.serverStatus());
+    }
+  });
+  document.getElementById('btnSrvDisconnect').addEventListener('click', async () => {
+    await api.serverDisconnect();
+    showAlert('success', 'Отключено от сервера');
+    renderServer(await api.serverStatus());
   });
 
   function showAlert(type, msg) {

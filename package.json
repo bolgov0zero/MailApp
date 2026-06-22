@@ -1,6 +1,6 @@
 {
   "name": "mailapp",
-  "version": "1.7.6",
+  "version": "1.7.7",
   "description": "Mail.ru desktop client",
   "main": "src/main.js",
   "scripts": {
@@ -26,6 +26,11 @@
       "owner": "bolgov0zero",
       "repo": "MailApp"
     },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
     "win": {
       "target": [
         {
@@ -45,7 +50,8 @@
       "uninstallerIcon": "assets/icon.ico",
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "MailApp"
+      "shortcutName": "MailApp",
+      "include": "build/installer.nsh"
     },
     "icon": "assets/icon.ico"
   }

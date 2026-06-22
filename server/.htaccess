@@ -1,0 +1,13 @@
+# Protect data & config — never serve these over HTTP.
+<FilesMatch "\.(db|db-wal|db-shm|sqlite)$">
+    Require all denied
+</FilesMatch>
+<Files "config.php">
+    Require all denied
+</Files>
+<Files "config.example.php">
+    Require all denied
+</Files>
+
+# Default document
+DirectoryIndex index.php
