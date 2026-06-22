@@ -36,7 +36,15 @@ function Get-AppExe {
 }
 
 function Get-AppVersion($exe) {
-  try { if (Test-Path $exe) { return (Get-Item $exe).VersionInfo.ProductVersion.Trim() } } catch {}
+  # Determined from the exe itself (ProductVersion), trimmed to 3 components.
+  try {
+    if (Test-Path $exe) {
+      $v = (Get-Item $exe).VersionInfo.ProductVersion.Trim()
+      $p = $v -split '\.'
+      if ($p.Count -ge 3) { return ($p[0..2] -join '.') }
+      return $v
+    }
+  } catch {}
   return ''
 }
 
@@ -106,31 +114,41 @@ function Invoke-Update($srv, $currentVer) {
   $asset = $rel.assets | Where-Object { $_.name -match '\.exe$' -and $_.name -notmatch 'blockmap' } | Select-Object -First 1
   if (-not $asset) { Log 'no .exe asset'; return }
 
+  # Remember whether the GUI was running — only relaunch it afterwards if so.
+  $wasRunning = [bool](Get-Process -Name 'MailApp' -ErrorAction SilentlyContinue)
+  Log "app running before update: $wasRunning"
+
   $installer = Join-Path $env:TEMP $asset.name
+  try { Send-Heartbeat $srv $currentVer 'downloading' | Out-Null } catch {}
   Log "downloading $($asset.browser_download_url)"
   Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing -TimeoutSec 600
   Log "downloaded to $installer"
-  try { Send-Heartbeat $srv $currentVer 'updating' | Out-Null } catch {}
 
   # Silent install. The installer's NSIS skips the service on /S, so this
   # running service is NOT touched/locked — no self-stop, no restart needed.
+  try { Send-Heartbeat $srv $currentVer 'installing' | Out-Null } catch {}
   Log 'running silent installer'
   $p = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
   Log "installer exit code: $($p.ExitCode)"
 
-  # Relaunch the app in the logged-on user's interactive session (a silent
-  # SYSTEM install does not start the GUI; the service is in session 0).
-  try {
-    $user = (Get-CimInstance Win32_ComputerSystem).UserName
-    if ($user) {
-      $exe = Get-AppExe
-      Log "relaunching app for user $user : $exe"
-      schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /f | Out-Null
-      schtasks /run /tn 'MailAppLaunch' | Out-Null
-    } else {
-      Log 'no interactive user; skipping relaunch'
-    }
-  } catch { Log "relaunch error: $($_.Exception.Message)" }
+  if ($wasRunning) {
+    # Relaunch the app in the logged-on user's interactive session (a silent
+    # SYSTEM install does not start the GUI; the service is in session 0).
+    try { Send-Heartbeat $srv $currentVer 'launching' | Out-Null } catch {}
+    try {
+      $user = (Get-CimInstance Win32_ComputerSystem).UserName
+      if ($user) {
+        $exe = Get-AppExe
+        Log "relaunching app for user $user : $exe"
+        schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /f | Out-Null
+        schtasks /run /tn 'MailAppLaunch' | Out-Null
+      } else {
+        Log 'no interactive user; skipping relaunch'
+      }
+    } catch { Log "relaunch error: $($_.Exception.Message)" }
+  } else {
+    Log 'app was not running; not relaunching'
+  }
 }
 
 # ── main loop ──────────────────────────────────────────────────────
