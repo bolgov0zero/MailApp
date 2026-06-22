@@ -43,4 +43,6 @@
   nsExec::Exec '"${SVC_EXE}" stop'
   nsExec::Exec '"${SVC_EXE}" uninstall'
   nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'
+  nsExec::Exec 'schtasks /delete /tn "MailAppApply" /f'
+  nsExec::Exec 'schtasks /delete /tn "MailAppLaunch" /f'
 !macroend

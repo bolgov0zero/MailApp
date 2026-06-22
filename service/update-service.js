@@ -77,15 +77,27 @@ async function doUpdate() {
     await download(asset.browser_download_url, installer);
     log('downloaded to ' + installer);
 
-    // Helper batch: stop this service (frees the file locks), then run the
-    // silent installer, which reinstalls + restarts the service via NSIS.
+    // Helper batch: stop this service (frees the file locks), run the silent
+    // installer (reinstalls + restarts the service via NSIS), then relaunch the
+    // app in the interactive user's session — a silent SYSTEM install does not
+    // start the GUI, and the service runs in session 0 (invisible). We relaunch
+    // via a one-off task running as the logged-on user (/it = interactive).
+    const appExe = process.execPath; // path to MailApp.exe (same after update)
+    const q = '\\"';                 // literal \" inside the .bat
+    const applyLog = path.join(DATA_DIR, 'apply.log');
     const bat = path.join(os.tmpdir(), 'mailapp-apply-update.bat');
     fs.writeFileSync(bat, [
       '@echo off',
-      `net stop ${SERVICE_ID}`,
+      `echo === apply %DATE% %TIME% >> "${applyLog}"`,
+      `net stop ${SERVICE_ID} >> "${applyLog}" 2>&1`,
       'ping 127.0.0.1 -n 4 >nul',
-      `"${installer}" /S`,
-      'schtasks /delete /tn "MailAppApply" /f',
+      `"${installer}" /S >> "${applyLog}" 2>&1`,
+      'ping 127.0.0.1 -n 3 >nul',
+      `for /f "usebackq delims=" %%u in (\`powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem).UserName"\`) do set CURUSER=%%u`,
+      `echo user=%CURUSER% >> "${applyLog}"`,
+      `if defined CURUSER schtasks /create /tn "MailAppLaunch" /tr "${q}${appExe}${q}" /sc ONCE /st 00:00 /ru "%CURUSER%" /it /f >> "${applyLog}" 2>&1`,
+      `if defined CURUSER schtasks /run /tn "MailAppLaunch" >> "${applyLog}" 2>&1`,
+      `schtasks /delete /tn "MailAppApply" /f >nul 2>&1`,
     ].join('\r\n'));
 
     // Run the helper via a one-off SYSTEM scheduled task so it lives OUTSIDE
