@@ -268,6 +268,12 @@ async function refreshClients(){
   }catch(e){}
 }
 function localizeStatic(){ document.querySelectorAll('.ts[data-ts]').forEach(el=>{ el.textContent=fmtTs(el.dataset.ts); }); }
+// Auto-hide the flash message after a few seconds.
+(function(){
+  const fl=document.querySelector('.flash');
+  if(!fl) return;
+  setTimeout(()=>{ fl.style.transition='opacity .4s'; fl.style.opacity='0'; setTimeout(()=>fl.remove(),400); },3000);
+})();
 localizeStatic();
 refreshClients();
 setInterval(refreshClients,10000);
