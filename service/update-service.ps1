@@ -13,6 +13,9 @@
 #    in the logged-on user's session; otherwise report "up_to_date".
 
 $ErrorActionPreference = 'Stop'
+# CRITICAL: with the progress bar on, Invoke-WebRequest is 10-50x slower and a
+# ~90 MB installer can exceed the timeout (was causing 'Загрузка' to hang).
+$ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $Repo       = 'bolgov0zero/MailApp'
@@ -121,7 +124,21 @@ function Invoke-Update($srv, $currentVer) {
   $installer = Join-Path $env:TEMP $asset.name
   try { Send-Heartbeat $srv $currentVer 'downloading' | Out-Null } catch {}
   Log "downloading $($asset.browser_download_url)"
-  Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing -TimeoutSec 600
+  $downloaded = $false
+  for ($i = 1; $i -le 3 -and -not $downloaded; $i++) {
+    try {
+      Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing -TimeoutSec 1800
+      $downloaded = $true
+    } catch {
+      Log "download attempt $i failed: $($_.Exception.Message)"
+      Start-Sleep -Seconds 5
+    }
+  }
+  if (-not $downloaded) {
+    Log 'download failed after retries'
+    try { Send-Heartbeat $srv $currentVer 'error' | Out-Null } catch {}
+    return
+  }
   Log "downloaded to $installer"
 
   # Silent install. The installer's NSIS skips the service on /S, so this
