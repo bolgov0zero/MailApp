@@ -138,9 +138,12 @@ function is_online($lastSeen, $offlineAfter) {
       <div class="stat"><div class="n" id="statTotal">0</div><div class="l">всего</div></div>
       <div class="stat on"><div class="n" id="statOnline">0</div><div class="l">онлайн</div></div>
     </div>
-    <div class="grid" id="clientsGrid">
-      <div class="empty">Загрузка…</div>
-    </div>
+    <div class="panel"><div class="table-wrap">
+      <table>
+        <thead><tr><th>Статус</th><th>Имя ПК</th><th>IP</th><th>Версия</th><th>Профиль</th><th>Обновление</th><th>Контакт</th><th>Действия</th></tr></thead>
+        <tbody id="clientsBody"><tr><td colspan="8" class="empty">Загрузка…</td></tr></tbody>
+      </table>
+    </div></div>
   </section>
 
   <section class="section">
@@ -151,29 +154,30 @@ function is_online($lastSeen, $offlineAfter) {
       <input type="text" name="label" placeholder="Метка (например: офис 1)" maxlength="100">
       <button class="btn" type="submit">Создать код</button>
     </form>
-    <?php if (!$codes): ?>
-      <div class="empty">Нет кодов — создайте первый</div>
-    <?php else: ?>
-    <div class="codes">
-      <?php foreach ($codes as $i => $code):
-        $display = make_connect_code($code['token']); ?>
-        <div class="code-item">
-          <div class="code-head">
-            <span class="code-label"><?= h($code['label'] ?: 'Без метки') ?></span>
-            <span class="ts" data-ts="<?= h($code['created_at']) ?>"><?= h($code['created_at']) ?></span>
-          </div>
-          <div class="code-box mono" id="code<?= $i ?>"><?= h($display) ?></div>
-          <div class="code-acts">
-            <button class="btn-sm" type="button" onclick="copyText('<?= h($display) ?>')">Копировать</button>
-            <button class="btn-sm ghost" type="button" onclick="toggleBox('code<?= $i ?>',this)">Показать</button>
-            <span class="spacer"></span>
-            <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="regen_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm ghost">Пересоздать</button></form>
-            <form method="post" onsubmit="return confirm('Удалить код?')"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="delete_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm danger">✕</button></form>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    <div class="panel"><div class="table-wrap">
+      <table>
+        <thead><tr><th>Метка</th><th>Код подключения</th><th>Создан</th><th>Действия</th></tr></thead>
+        <tbody>
+        <?php if (!$codes): ?>
+          <tr><td colspan="4" class="empty">Нет кодов — создайте первый</td></tr>
+        <?php endif; ?>
+        <?php foreach ($codes as $i => $code):
+          $display = make_connect_code($code['token']); ?>
+          <tr>
+            <td><?= h($code['label'] ?: 'Без метки') ?></td>
+            <td class="code-cell"><span class="code-text mono trunc" id="code<?= $i ?>"><?= h($display) ?></span></td>
+            <td class="dim ts" data-ts="<?= h($code['created_at']) ?>"><?= h($code['created_at']) ?></td>
+            <td class="actions">
+              <button class="btn-sm" type="button" onclick="copyText('<?= h($display) ?>')">Копировать</button>
+              <button class="btn-sm ghost" type="button" onclick="toggleBox('code<?= $i ?>',this)">Показать</button>
+              <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="regen_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm ghost">Пересоздать</button></form>
+              <form method="post" onsubmit="return confirm('Удалить код?')"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="delete_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm danger">✕</button></form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div></div>
     <p class="hint">Код содержит зашифрованный адрес сервера. Пересоздание/удаление кода не отключает уже подключённые клиенты — они работают по своему постоянному токену.</p>
   </section>
 </main>
@@ -219,43 +223,38 @@ function msgBadge(text){
   else if(/запущен|обновл/i.test(text)) cls='b-info';
   return '<span class="badge '+cls+'">'+esc(text)+'</span>';
 }
-function clientCard(c){
+function clientRow(c){
   const status=c.online
     ? '<span class="badge b-on"><span class="dot"></span>онлайн</span>'
     : '<span class="badge b-off"><span class="dot"></span>офлайн</span>';
   const ver=c.version?'<span class="badge b-ver">'+esc(c.version)+'</span>':'<span class="dim">—</span>';
-  const upd=c.pending_update
-    ? '<span class="badge b-warn">в очереди</span>'
-    : msgBadge(c.last_message);
+  const upd=c.pending_update?'<span class="badge b-warn">в очереди</span>':msgBadge(c.last_message);
   let act='';
   if(c.pending_update){
     act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>');
   }else{
     act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>');
   }
-  act+='<span class="spacer"></span>';
   act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
-  return '<div class="cli">'
-    +'<div class="cli-top"><span class="cli-name trunc" title="'+esc(c.hostname||'')+'">'+esc(c.hostname||'—')+'</span>'+status+'</div>'
-    +'<div class="cli-rows">'
-      +'<div class="row"><span class="k">IP</span><span class="v mono">'+esc(c.local_ip||'—')+'</span></div>'
-      +'<div class="row"><span class="k">Версия</span><span class="v">'+ver+'</span></div>'
-      +'<div class="row"><span class="k">Профиль</span><span class="v" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</span></div>'
-      +'<div class="row"><span class="k">Контакт</span><span class="v dim">'+fmtTs(c.last_seen)+'</span></div>'
-      +'<div class="row"><span class="k">Обновление</span><span class="v">'+upd+'</span></div>'
-    +'</div>'
-    +'<div class="cli-actions">'+act+'</div>'
-    +'</div>';
+  return '<tr>'
+    +'<td>'+status+'</td>'
+    +'<td class="t-host trunc" title="'+esc(c.hostname||'')+'">'+esc(c.hostname||'—')+'</td>'
+    +'<td class="mono">'+esc(c.local_ip||'—')+'</td>'
+    +'<td>'+ver+'</td>'
+    +'<td class="t-prof trunc" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</td>'
+    +'<td>'+upd+'</td>'
+    +'<td class="dim">'+fmtTs(c.last_seen)+'</td>'
+    +'<td class="actions">'+act+'</td>'
+    +'</tr>';
 }
 async function refreshClients(){
   try{
     const r=await fetch('index.php?ajax=clients',{cache:'no-store'});
     const list=await r.json();
-    const grid=document.getElementById('clientsGrid');
     document.getElementById('clientCount').textContent=list.length;
     document.getElementById('statTotal').textContent=list.length;
     document.getElementById('statOnline').textContent=list.filter(c=>c.online).length;
-    grid.innerHTML=list.length?list.map(clientCard).join(''):'<div class="empty">Пока нет подключённых клиентов</div>';
+    document.getElementById('clientsBody').innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="8" class="empty">Пока нет подключённых клиентов</td></tr>';
     document.getElementById('refreshTick').textContent='обновлено '+new Date().toLocaleTimeString();
   }catch(e){}
 }
