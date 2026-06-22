@@ -31,12 +31,14 @@
 !macroend
 
 !macro customInstall
-  ; Ensure the shared data dir is writable by standard users — settings.json
-  ; (incl. the server connection token) lives here and is written by the app
-  ; running as a normal user. Without this, a user-level run can't persist the
-  ; pairing token. *S-1-5-32-545 = BUILTIN\Users (locale-independent), M = Modify.
+  ; Ensure the shared data dir is writable by standard users (incl. domain
+  ; accounts) — settings.json (incl. the server connection token) lives here and
+  ; is written by the app running as a normal user. SIDs are locale-independent:
+  ;   *S-1-5-32-545 = BUILTIN\Users, *S-1-5-11 = NT AUTHORITY\Authenticated Users
+  ; Authenticated Users covers every signed-in account regardless of group
+  ; nesting, so domain users are covered too. M = Modify, (OI)(CI) inherit.
   CreateDirectory "C:\ProgramData\MailApp"
-  nsExec::Exec 'icacls "C:\ProgramData\MailApp" /grant "*S-1-5-32-545:(OI)(CI)M" /T'
+  nsExec::Exec 'icacls "C:\ProgramData\MailApp" /grant "*S-1-5-32-545:(OI)(CI)M" /grant "*S-1-5-11:(OI)(CI)M" /T'
 
   nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'   ; remove legacy scheduled task
   ; Silent install = server/service-driven app update → never touch the service.
