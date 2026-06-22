@@ -51,7 +51,8 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "MailApp",
-      "include": "build/installer.nsh"
+      "include": "build/installer.nsh",
+      "warningsAsErrors": false
     },
     "icon": "assets/icon.ico"
   }
