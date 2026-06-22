@@ -24,7 +24,7 @@ $SettingsFp = Join-Path $DataDir 'settings.json'
 $LogFp      = Join-Path $DataDir 'service.log'
 $SvcDir     = $PSScriptRoot
 $AppPathFp  = Join-Path $SvcDir 'app.txt'   # written by the installer: full path to MailApp.exe
-$HeartbeatSec = 10
+$HeartbeatSec = 5
 
 function Log($msg) {
   try {

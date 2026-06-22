@@ -286,6 +286,6 @@ function localizeStatic(){ document.querySelectorAll('.ts[data-ts]').forEach(el=
 })();
 localizeStatic();
 refreshClients();
-setInterval(refreshClients,10000);
+setInterval(refreshClients,5000);
 </script>
 </body></html>
