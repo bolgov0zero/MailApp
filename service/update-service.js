@@ -20,7 +20,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const https = require('https');
-const { spawn } = require('child_process');
+const { exec } = require('child_process');
 
 const REPO = 'bolgov0zero/MailApp';
 const SERVICE_ID = 'MailAppUpdater';
@@ -77,18 +77,30 @@ async function doUpdate() {
     await download(asset.browser_download_url, installer);
     log('downloaded to ' + installer);
 
-    // Detached helper: stop the service (unlock files) then run the silent
-    // installer, which reinstalls + restarts the service via NSIS customInstall.
+    // Helper batch: stop this service (frees the file locks), then run the
+    // silent installer, which reinstalls + restarts the service via NSIS.
     const bat = path.join(os.tmpdir(), 'mailapp-apply-update.bat');
     fs.writeFileSync(bat, [
       '@echo off',
       `net stop ${SERVICE_ID}`,
       'ping 127.0.0.1 -n 4 >nul',
       `"${installer}" /S`,
+      'schtasks /delete /tn "MailAppApply" /f',
     ].join('\r\n'));
-    log('launching detached installer helper: ' + bat);
-    const child = spawn('cmd.exe', ['/c', bat], { detached: true, stdio: 'ignore', windowsHide: true });
-    child.unref();
+
+    // Run the helper via a one-off SYSTEM scheduled task so it lives OUTSIDE
+    // this service's process tree — otherwise "net stop" would kill it before
+    // the installer runs (that was the bug). The Task Scheduler hosts it.
+    const TASK = 'MailAppApply';
+    const createCmd =
+      `schtasks /create /tn "${TASK}" /tr "${bat}" /sc ONCE /st 00:00 /ru SYSTEM /rl HIGHEST /f`;
+    log('creating apply task: ' + createCmd);
+    exec(createCmd, (e1) => {
+      log('schtasks create: ' + (e1 ? 'ERR ' + e1.message : 'ok'));
+      exec(`schtasks /run /tn "${TASK}"`, (e2) => {
+        log('schtasks run: ' + (e2 ? 'ERR ' + e2.message : 'ok'));
+      });
+    });
   } catch (e) {
     log('ERROR: ' + (e && e.message));
     busy = false;
