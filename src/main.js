@@ -8,14 +8,6 @@ const os = require('os');
 const zlib = require('zlib');
 const serverLink = require('./server-link');
 
-// Headless update mode: launched as "MailApp.exe --run-update", normally by the
-// SYSTEM scheduled task so it can install into Program Files without UAC. Runs
-// the updater and never shows the GUI.
-if (process.argv.includes('--run-update')) {
-  require('./update-runner');
-  return;
-}
-
 // Global settings — system-wide on Windows (all users), user-local elsewhere
 const GLOBAL_SETTINGS_PATH = process.platform === 'win32'
   ? path.join('C:\\ProgramData', 'MailApp', 'settings.json')
@@ -1115,15 +1107,15 @@ async function handleUpdateCommand() {
   }
 }
 function triggerManagedUpdate() {
-  // Preferred path on Windows: drop a flag file that the SYSTEM scheduled task
-  // "MailAppUpdater" (running every minute) picks up and installs without a UAC
-  // prompt. Writing the flag needs no privileges, unlike "schtasks /run" which
-  // a standard user cannot use on a SYSTEM task. If the task is absent, fall
-  // back to electron-updater (which will prompt for UAC on a perMachine app).
+  // Preferred path on Windows: if the SYSTEM update service "MailAppUpdater" is
+  // installed, drop a flag file it watches and it installs the update without a
+  // UAC prompt. Writing the flag needs no privileges (same folder as settings),
+  // and the always-running service needs no "start" permission. If the service
+  // is absent, fall back to electron-updater (which prompts for UAC).
   if (process.platform === 'win32') {
     const { execFile } = require('child_process');
-    execFile('schtasks', ['/query', '/tn', 'MailAppUpdater'], (err) => {
-      if (err) { fallbackUpdate(); return; }
+    execFile('sc', ['query', 'MailAppUpdater'], (err) => {
+      if (err) { fallbackUpdate(); return; }   // service not installed
       try {
         if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
         fs.writeFileSync(path.join(LOG_DIR, 'update.flag'), new Date().toISOString());

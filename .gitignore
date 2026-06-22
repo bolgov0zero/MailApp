@@ -7,6 +7,9 @@ out/
 Thumbs.db
 
 # Server runtime data / local config (never committed; live in server root)
+# WinSW binary is downloaded during CI, not committed
+service/MailAppService.exe
+
 server/config.php
 server/mailapp.db
 server/mailapp.db-wal
