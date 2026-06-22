@@ -163,11 +163,42 @@ function Relaunch-App {
     }
     if (-not $user) { Log 'relaunch: no interactive user found'; return }
     Log "relaunch: user=$user exe=$exe"
-    # /f overwrites any existing task, so no pre-delete is needed.
-    $c = & schtasks /create /tn 'MailAppLaunch' /tr "`"$exe`"" /sc ONCE /st 00:00 /ru "$user" /it /rl LIMITED /f 2>&1
+    # Register via explicit XML with LogonType=InteractiveToken — the reliable
+    # way to launch a GUI in the logged-on user's session from a SYSTEM service
+    # (no password needed; runs in the interactive desktop).
+    $xml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>MailApp relaunch after update</Description></RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>$user</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <MultipleInstancesPolicy>Parallel</MultipleInstancesPolicy>
+    <ExecutionTimeLimit>PT10M</ExecutionTimeLimit>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+  </Settings>
+  <Actions Context="Author">
+    <Exec><Command>$exe</Command></Exec>
+  </Actions>
+</Task>
+"@
+    $xmlPath = Join-Path $env:TEMP 'mailapp-launch.xml'
+    [System.IO.File]::WriteAllText($xmlPath, $xml, [System.Text.Encoding]::Unicode)
+    $c = & schtasks /create /tn 'MailAppLaunch' /xml "$xmlPath" /f 2>&1
     Log "relaunch create (exit $LASTEXITCODE): $c"
     $r = & schtasks /run /tn 'MailAppLaunch' 2>&1
     Log "relaunch run (exit $LASTEXITCODE): $r"
+    Start-Sleep -Seconds 2
+    $q = (& schtasks /query /tn 'MailAppLaunch' /v /fo LIST 2>&1 | Select-String -Pattern 'Result|Результат') -join ' | '
+    Log "relaunch lastresult: $q"
   } catch {
     Log "relaunch error: $($_.Exception.Message)"
   } finally {
