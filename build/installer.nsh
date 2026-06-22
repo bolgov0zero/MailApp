@@ -22,7 +22,10 @@
     ; Task already present (update) — refresh its command/path.
     !insertmacro registerUpdateTask
   ${Else}
-    MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." /SD IDNO IDYES mailapp_install_svc IDNO mailapp_skip_svc
+    ; /SD IDYES: silent installs (auto-updates) also create the task, so a
+    ; machine that updated silently still ends up with the SYSTEM updater and
+    ; future updates need no UAC. Interactive installs still show the choice.
+    MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." /SD IDYES IDYES mailapp_install_svc IDNO mailapp_skip_svc
     mailapp_install_svc:
       !insertmacro registerUpdateTask
       Goto mailapp_svc_done
