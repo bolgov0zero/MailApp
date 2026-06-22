@@ -32,27 +32,27 @@
 
 !macro customInstall
   nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'   ; remove legacy scheduled task
-  ${IfNot} ${Silent}
+  ; Silent install = server/service-driven app update → never touch the service.
+  IfSilent mailapp_ci_end
     nsExec::Exec 'sc query MailAppUpdater'
     Pop $0
-    ${If} $0 == 0
+    StrCmp $0 "0" mailapp_ci_do 0
+    MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." IDNO mailapp_ci_end
+    mailapp_ci_do:
       !insertmacro installService
-    ${Else}
-      MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." /SD IDYES IDYES mailapp_install_svc IDNO mailapp_skip_svc
-      mailapp_install_svc:
-        !insertmacro installService
-        Goto mailapp_svc_done
-      mailapp_skip_svc:
-      mailapp_svc_done:
-    ${EndIf}
-  ${EndIf}
+  mailapp_ci_end:
 !macroend
 
 !macro customUnInstall
-  nsExec::Exec 'sc stop MailAppUpdater'
-  nsExec::Exec '"${SVC_DIR}\MailAppService.exe" uninstall'
-  nsExec::Exec 'sc delete MailAppUpdater'
-  nsExec::Exec 'schtasks /delete /tn "MailAppApply" /f'
-  nsExec::Exec 'schtasks /delete /tn "MailAppLaunch" /f'
-  RMDir /r "${SVC_DIR}"
+  ; During an update electron-builder runs the OLD uninstaller silently first.
+  ; We must NOT remove the service then (it is what runs the installer!). Only
+  ; tear it down on a real, interactive uninstall.
+  IfSilent mailapp_cu_end
+    nsExec::Exec 'sc stop MailAppUpdater'
+    nsExec::Exec '"${SVC_DIR}\MailAppService.exe" uninstall'
+    nsExec::Exec 'sc delete MailAppUpdater'
+    nsExec::Exec 'schtasks /delete /tn "MailAppApply" /f'
+    nsExec::Exec 'schtasks /delete /tn "MailAppLaunch" /f'
+    RMDir /r "${SVC_DIR}"
+  mailapp_cu_end:
 !macroend
