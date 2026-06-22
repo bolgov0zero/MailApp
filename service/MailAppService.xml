@@ -1,19 +1,19 @@
 <service>
   <id>MailAppUpdater</id>
   <name>MailApp Update Service</name>
-  <description>Устанавливает обновления MailApp от имени системы без запроса прав администратора.</description>
+  <description>Heartbeat и обновление MailApp от имени системы без запроса прав администратора.</description>
 
-  <!-- Run the bundled Electron binary as a plain Node process (no GUI). -->
-  <executable>%BASE%\..\..\MailApp.exe</executable>
-  <env name="ELECTRON_RUN_AS_NODE" value="1"/>
-  <arguments>"%BASE%\update-service.js"</arguments>
+  <!-- Runtime is the system PowerShell (System32) — independent of the app, so
+       app updates never lock the service. The script lives next to this exe in
+       C:\ProgramData\MailApp\service (also outside the app folder). -->
+  <executable>powershell.exe</executable>
+  <arguments>-ExecutionPolicy Bypass -NoProfile -File "%BASE%\update-service.ps1"</arguments>
 
-  <!-- LocalSystem (default for WinSW services) so it can write Program Files. -->
   <startmode>Automatic</startmode>
   <onfailure action="restart" delay="10 sec"/>
 
   <log mode="roll-by-size">
-    <sizeThreshold>1024</sizeThreshold>
+    <sizeThreshold>2048</sizeThreshold>
     <keepFiles>2</keepFiles>
   </log>
 </service>

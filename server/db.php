@@ -29,11 +29,20 @@ function db() {
             created_at     TEXT DEFAULT '',
             last_seen      TEXT DEFAULT '',
             last_message   TEXT DEFAULT '',
-            last_message_at TEXT DEFAULT ''
+            last_message_at TEXT DEFAULT '',
+            app_version       TEXT DEFAULT '',
+            app_last_seen     TEXT DEFAULT '',
+            service_version   TEXT DEFAULT '',
+            service_last_seen TEXT DEFAULT ''
         )
     ");
     // Migrations for DBs created by earlier versions (ignore if column exists).
-    foreach (['last_message TEXT', 'last_message_at TEXT'] as $col) {
+    $cols = [
+        'last_message TEXT', 'last_message_at TEXT',
+        'app_version TEXT', 'app_last_seen TEXT',
+        'service_version TEXT', 'service_last_seen TEXT',
+    ];
+    foreach ($cols as $col) {
         try { $pdo->exec("ALTER TABLE clients ADD COLUMN $col DEFAULT ''"); } catch (Exception $e) {}
     }
 

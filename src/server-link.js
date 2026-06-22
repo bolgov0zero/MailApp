@@ -60,6 +60,7 @@ function localIp() {
 
 function inventory() {
   return {
+    source: 'app',
     hostname: os.hostname(),
     local_ip: localIp(),
     version: deps.getVersion(),

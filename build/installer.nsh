@@ -1,48 +1,58 @@
-; Custom NSIS logic for MailApp: optional "update service".
+; Custom NSIS logic for MailApp: independent "update service".
 ;
-; The update service is a real Windows service (LocalSystem) registered via the
-; bundled WinSW wrapper (resources\service\MailAppService.exe + .xml). It runs
-; MailApp.exe in Node mode (update-service.js), stays resident, and watches a
-; flag file the unprivileged client drops to request an update. Being SYSTEM it
-; installs into Program Files WITHOUT a UAC prompt, and the client needs no
-; permission to "start" anything — it just writes the flag.
+; The service is hosted by WinSW but RUNS powershell.exe (System32) with
+; update-service.ps1, and all service files live in C:\ProgramData\MailApp\
+; service — OUTSIDE the app folder. So an app update never locks the service:
+; it keeps running and orchestrates the install without restarting itself.
 ;
-; - Interactive clean install: a Yes/No prompt offers to install the service.
-; - Update / silent: refreshed if already present (silent defaults to Yes).
+; - Interactive (manual exe) install: (re)install/refresh the service.
+; - Silent install (server/service-driven app update, run with /S): DO NOT touch
+;   the service at all — only the app files are replaced.
 
-!define SVC_EXE "$INSTDIR\resources\service\MailAppService.exe"
+!define SVC_DIR "C:\ProgramData\MailApp\service"
 
 !macro installService
-  ; Remove the legacy scheduled task from older versions, if present.
+  ; Drop any previous registration (old in-app-dir service or current) + legacy task.
+  nsExec::Exec 'sc stop MailAppUpdater'
+  nsExec::Exec 'sc delete MailAppUpdater'
   nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'
-  ; (Re)install the service. stop/uninstall first so paths refresh cleanly.
-  nsExec::Exec '"${SVC_EXE}" stop'
-  nsExec::Exec '"${SVC_EXE}" uninstall'
-  nsExec::Exec '"${SVC_EXE}" install'
-  nsExec::Exec '"${SVC_EXE}" start'
+  ; Copy service files to the stable ProgramData location.
+  CreateDirectory "${SVC_DIR}"
+  CopyFiles /SILENT "$INSTDIR\resources\service\MailAppService.exe" "${SVC_DIR}\MailAppService.exe"
+  CopyFiles /SILENT "$INSTDIR\resources\service\MailAppService.xml" "${SVC_DIR}\MailAppService.xml"
+  CopyFiles /SILENT "$INSTDIR\resources\service\update-service.ps1" "${SVC_DIR}\update-service.ps1"
+  ; Record the app exe path so the service can read the version / relaunch it.
+  FileOpen $9 "${SVC_DIR}\app.txt" w
+  FileWrite $9 "$INSTDIR\MailApp.exe"
+  FileClose $9
+  ; Register + start.
+  nsExec::Exec '"${SVC_DIR}\MailAppService.exe" install'
+  nsExec::Exec '"${SVC_DIR}\MailAppService.exe" start'
 !macroend
 
 !macro customInstall
-  ; If the service already exists (update), refresh it; otherwise ask on a clean
-  ; interactive install (silent installs default to Yes so the service persists).
-  nsExec::Exec 'sc query MailAppUpdater'
-  Pop $0
-  ${If} $0 == 0
-    !insertmacro installService
-  ${Else}
-    MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." /SD IDYES IDYES mailapp_install_svc IDNO mailapp_skip_svc
-    mailapp_install_svc:
+  nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'   ; remove legacy scheduled task
+  ${IfNot} ${Silent}
+    nsExec::Exec 'sc query MailAppUpdater'
+    Pop $0
+    ${If} $0 == 0
       !insertmacro installService
-      Goto mailapp_svc_done
-    mailapp_skip_svc:
-    mailapp_svc_done:
+    ${Else}
+      MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." /SD IDYES IDYES mailapp_install_svc IDNO mailapp_skip_svc
+      mailapp_install_svc:
+        !insertmacro installService
+        Goto mailapp_svc_done
+      mailapp_skip_svc:
+      mailapp_svc_done:
+    ${EndIf}
   ${EndIf}
 !macroend
 
 !macro customUnInstall
-  nsExec::Exec '"${SVC_EXE}" stop'
-  nsExec::Exec '"${SVC_EXE}" uninstall'
-  nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'
+  nsExec::Exec 'sc stop MailAppUpdater'
+  nsExec::Exec '"${SVC_DIR}\MailAppService.exe" uninstall'
+  nsExec::Exec 'sc delete MailAppUpdater'
   nsExec::Exec 'schtasks /delete /tn "MailAppApply" /f'
   nsExec::Exec 'schtasks /delete /tn "MailAppLaunch" /f'
+  RMDir /r "${SVC_DIR}"
 !macroend

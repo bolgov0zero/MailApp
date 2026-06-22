@@ -85,16 +85,23 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'clients') {
     $offlineAfter = (int) cfg('offline_after');
     $rows = $pdo->query('SELECT * FROM clients ORDER BY hostname COLLATE NOCASE ASC, id ASC')->fetchAll();
     $out = [];
+    $fresh = function ($ts) use ($offlineAfter) {
+        $t = $ts ? strtotime($ts) : 0;
+        return $t && (time() - $t) <= $offlineAfter;
+    };
     foreach ($rows as $c) {
-        $t = $c['last_seen'] ? strtotime($c['last_seen']) : 0;
+        // Prefer the most recent contact (app or service) for "last seen".
+        $lastSeen = $c['last_seen'];
         $out[] = [
             'id'              => (int) $c['id'],
-            'online'          => ($t && (time() - $t) <= $offlineAfter),
+            'app_online'      => $fresh($c['app_last_seen']),
+            'service_online'  => $fresh($c['service_last_seen']),
             'hostname'        => $c['hostname'],
             'local_ip'        => $c['local_ip'],
-            'version'         => $c['version'],
+            'app_version'     => $c['app_version'],
+            'service_version' => $c['service_version'],
             'profile'         => $c['profile'],
-            'last_seen'       => $c['last_seen'],
+            'last_seen'       => $lastSeen,
             'pending_update'  => (int) $c['pending_update'],
             'last_message'    => $c['last_message'],
             'last_message_at' => $c['last_message_at'],
@@ -140,8 +147,8 @@ function is_online($lastSeen, $offlineAfter) {
     </div>
     <div class="panel"><div class="table-wrap">
       <table>
-        <thead><tr><th>Статус</th><th>Имя ПК</th><th>IP</th><th>Версия</th><th>Профиль</th><th>Обновление</th><th>Контакт</th><th>Действия</th></tr></thead>
-        <tbody id="clientsBody"><tr><td colspan="8" class="empty">Загрузка…</td></tr></tbody>
+        <thead><tr><th>Приложение</th><th>Служба</th><th>Имя ПК</th><th>IP</th><th>Версия</th><th>Профиль</th><th>Обновление</th><th>Контакт</th><th>Действия</th></tr></thead>
+        <tbody id="clientsBody"><tr><td colspan="9" class="empty">Загрузка…</td></tr></tbody>
       </table>
     </div></div>
   </section>
@@ -223,11 +230,13 @@ function msgBadge(text){
   else if(/запущен|обновл/i.test(text)) cls='b-info';
   return '<span class="badge '+cls+'">'+esc(text)+'</span>';
 }
-function clientRow(c){
-  const status=c.online
+function statusBadge(online){
+  return online
     ? '<span class="badge b-on"><span class="dot"></span>онлайн</span>'
     : '<span class="badge b-off"><span class="dot"></span>офлайн</span>';
-  const ver=c.version?'<span class="badge b-ver">'+esc(c.version)+'</span>':'<span class="dim">—</span>';
+}
+function clientRow(c){
+  const ver=c.app_version?'<span class="badge b-ver">'+esc(c.app_version)+'</span>':'<span class="dim">—</span>';
   const upd=c.pending_update?'<span class="badge b-warn">в очереди</span>':msgBadge(c.last_message);
   let act='';
   if(c.pending_update){
@@ -236,8 +245,10 @@ function clientRow(c){
     act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>');
   }
   act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
+  const svcVer=c.service_version?' <span class="dim" style="font-size:11px">v'+esc(c.service_version)+'</span>':'';
   return '<tr>'
-    +'<td>'+status+'</td>'
+    +'<td>'+statusBadge(c.app_online)+'</td>'
+    +'<td>'+statusBadge(c.service_online)+svcVer+'</td>'
     +'<td class="t-host trunc" title="'+esc(c.hostname||'')+'">'+esc(c.hostname||'—')+'</td>'
     +'<td class="mono">'+esc(c.local_ip||'—')+'</td>'
     +'<td>'+ver+'</td>'
@@ -253,8 +264,8 @@ async function refreshClients(){
     const list=await r.json();
     document.getElementById('clientCount').textContent=list.length;
     document.getElementById('statTotal').textContent=list.length;
-    document.getElementById('statOnline').textContent=list.filter(c=>c.online).length;
-    document.getElementById('clientsBody').innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="8" class="empty">Пока нет подключённых клиентов</td></tr>';
+    document.getElementById('statOnline').textContent=list.filter(c=>c.app_online||c.service_online).length;
+    document.getElementById('clientsBody').innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="9" class="empty">Пока нет подключённых клиентов</td></tr>';
     document.getElementById('refreshTick').textContent='обновлено '+new Date().toLocaleTimeString();
   }catch(e){}
 }

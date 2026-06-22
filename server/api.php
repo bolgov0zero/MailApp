@@ -55,19 +55,23 @@ if ($action === 'heartbeat') {
     $client = $st->fetch();
     if (!$client) json_out(['ok' => false, 'error' => 'unknown_device'], 403);
 
-    $up = $pdo->prepare(
-        'UPDATE clients SET hostname=?, local_ip=?, version=?, profile=?, last_seen=? WHERE id=?'
-    );
-    $up->execute([
-        clean_str($in['hostname'] ?? ''),
-        clean_str($in['local_ip'] ?? '', 64),
-        clean_str($in['version'] ?? '', 32),
-        clean_str($in['profile'] ?? ''),
-        now(),
-        $client['id'],
-    ]);
+    $source = (($in['source'] ?? 'app') === 'service') ? 'service' : 'app';
 
-    // Optional status report from a previous update command.
+    // Common fields + per-source presence/version columns.
+    $hostname = clean_str($in['hostname'] ?? '');
+    $ip       = clean_str($in['local_ip'] ?? '', 64);
+    $version  = clean_str($in['version'] ?? '', 32);
+    $profile  = clean_str($in['profile'] ?? '');
+    if ($source === 'service') {
+        $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, service_version=?, service_last_seen=?, last_seen=? WHERE id=?')
+            ->execute([$hostname, $ip, $version, now(), now(), $client['id']]);
+    } else {
+        // The app knows the profile; keep it authoritative from the app.
+        $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, profile=?, app_version=?, app_last_seen=?, last_seen=? WHERE id=?')
+            ->execute([$hostname, $ip, $profile, $version, now(), now(), $client['id']]);
+    }
+
+    // Optional status report from a previous update command (sent by service).
     if (isset($in['report']) && $in['report'] !== '') {
         $messages = [
             'up_to_date' => 'Уже актуальная версия',
@@ -75,15 +79,15 @@ if ($action === 'heartbeat') {
             'error'      => 'Ошибка обновления',
         ];
         $code = clean_str($in['report'], 32);
-        $msg = isset($messages[$code]) ? $messages[$code] : $code;
+        $m = isset($messages[$code]) ? $messages[$code] : $code;
         $pdo->prepare('UPDATE clients SET last_message=?, last_message_at=? WHERE id=?')
-            ->execute([$msg, now(), $client['id']]);
+            ->execute([$m, now(), $client['id']]);
     }
 
+    // The update is performed by the service, so deliver the command only to it.
     $command = null;
-    if (!empty($client['pending_update'])) {
+    if ($source === 'service' && !empty($client['pending_update'])) {
         $command = 'update';
-        // One-shot: clear the flag so it fires once. Admin can press again.
         $pdo->prepare('UPDATE clients SET pending_update = 0 WHERE id = ?')->execute([$client['id']]);
     }
     json_out(['ok' => true, 'command' => $command]);
