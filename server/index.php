@@ -147,8 +147,8 @@ function is_online($lastSeen, $offlineAfter) {
     </div>
     <div class="panel"><div class="table-wrap">
       <table>
-        <thead><tr><th>Статус</th><th>ПК</th><th>Версия</th><th>Профиль</th><th>Обновление</th><th>Контакт</th><th>Действия</th></tr></thead>
-        <tbody id="clientsBody"><tr><td colspan="7" class="empty">Загрузка…</td></tr></tbody>
+        <thead><tr><th>Статус</th><th>ПК</th><th>Версия</th><th>Профиль</th><th>Контакт</th><th>Действия</th></tr></thead>
+        <tbody id="clientsBody"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody>
       </table>
     </div></div>
   </section>
@@ -233,10 +233,21 @@ function msgBadge(text){
 function stBadge(label,online){
   return '<span class="badge '+(online?'b-on':'b-off')+'"><span class="dot"></span>'+label+'</span>';
 }
+// The Версия cell doubles as the update-status cell: while an update is in
+// progress it shows the status instead of the version; "Актуально" is held for
+// 20s after completion, then it reverts to the version number.
+function versionCell(c){
+  if(c.pending_update) return '<span class="badge b-warn">в очереди</span>';
+  const msg=c.last_message||'';
+  const at=c.last_message_at?Date.parse(c.last_message_at):0;
+  const elapsed=at?(Date.now()-at)/1000:1e9;
+  if(/ошибк/i.test(msg) && elapsed<120) return msgBadge(msg);
+  if(/загрузк|обновл|запуск/i.test(msg) && elapsed<300) return msgBadge(msg);
+  if(/актуальн/i.test(msg) && elapsed<20) return msgBadge(msg);   // hold 20s
+  return c.service_version?'<span class="badge b-ver">'+esc(c.service_version)+'</span>':'<span class="dim">—</span>';
+}
 function clientRow(c){
   const status='<div class="st">'+stBadge('Служба',c.service_online)+stBadge('Приложение',c.app_online)+'</div>';
-  const ver=c.service_version?'<span class="badge b-ver">'+esc(c.service_version)+'</span>':'<span class="dim">—</span>';
-  const upd=c.pending_update?'<span class="badge b-warn">в очереди</span>':msgBadge(c.last_message);
   let act='';
   if(c.pending_update){
     act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>');
@@ -249,9 +260,8 @@ function clientRow(c){
   return '<tr>'
     +'<td>'+status+'</td>'
     +'<td>'+pc+'</td>'
-    +'<td>'+ver+'</td>'
+    +'<td>'+versionCell(c)+'</td>'
     +'<td class="t-prof trunc" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</td>'
-    +'<td>'+upd+'</td>'
     +'<td class="dim">'+fmtTs(c.last_seen)+'</td>'
     +'<td><div class="actions">'+act+'</div></td>'
     +'</tr>';
@@ -263,7 +273,7 @@ async function refreshClients(){
     document.getElementById('clientCount').textContent=list.length;
     document.getElementById('statTotal').textContent=list.length;
     document.getElementById('statOnline').textContent=list.filter(c=>c.app_online||c.service_online).length;
-    document.getElementById('clientsBody').innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="7" class="empty">Пока нет подключённых клиентов</td></tr>';
+    document.getElementById('clientsBody').innerHTML=list.length?list.map(clientRow).join(''):'<tr><td colspan="6" class="empty">Пока нет подключённых клиентов</td></tr>';
     document.getElementById('refreshTick').textContent='обновлено '+new Date().toLocaleTimeString();
   }catch(e){}
 }
