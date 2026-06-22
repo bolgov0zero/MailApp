@@ -1,6 +1,6 @@
 {
   "name": "mailapp",
-  "version": "1.7.11",
+  "version": "1.7.12",
   "description": "Mail.ru desktop client",
   "main": "src/main.js",
   "scripts": {

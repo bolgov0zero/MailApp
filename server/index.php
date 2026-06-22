@@ -133,12 +133,14 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
 
   <section class="card">
     <h2>Клиенты <span class="count" id="clientCount">…</span> <span class="dim" id="refreshTick" style="margin-left:auto;font-weight:400"></span></h2>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Статус</th><th>Имя ПК</th><th>Локальный IP</th><th>Версия</th><th>Профиль</th><th>Сообщение</th><th>Последний контакт</th><th>Действия</th></tr></thead>
       <tbody id="clientsBody">
         <tr><td colspan="8" class="empty">Загрузка…</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <section class="card">
@@ -149,6 +151,7 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
       <input type="text" name="label" placeholder="Метка (например: офис 1)" maxlength="100">
       <button>Создать код</button>
     </form>
+    <div class="table-wrap">
     <table>
       <thead><tr><th>Метка</th><th>Код подключения</th><th>Создан</th><th>Действия</th></tr></thead>
       <tbody>
@@ -164,7 +167,7 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
             <a class="link" onclick="toggleCode(this)">Показать</a>
             <a class="link" data-code="<?= h($display) ?>" onclick="copyCode(this)">Копировать</a>
           </td>
-          <td class="dim"><?= h($code['created_at']) ?></td>
+          <td class="dim ts" data-ts="<?= h($code['created_at']) ?>"><?= h($code['created_at']) ?></td>
           <td class="actions">
             <form method="post"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="regen_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm ghost">Пересоздать</button></form>
             <form method="post" onsubmit="return confirm('Удалить код?')"><input type="hidden" name="csrf" value="<?= h($csrf) ?>"><input type="hidden" name="action" value="delete_code"><input type="hidden" name="id" value="<?= (int)$code['id'] ?>"><button class="btn-sm danger">✕</button></form>
@@ -173,6 +176,7 @@ function toggleCode(el){ const s=el.previousElementSibling; s.classList.toggle('
       <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
     <p class="hint">Код содержит зашифрованный адрес сервера. Пересоздание/удаление кода не отключает уже подключённые клиенты — они работают по своему постоянному токену.</p>
   </section>
 </main>
@@ -185,25 +189,42 @@ function cForm(action,id,inner,confirmJs){
     +'<input type="hidden" name="action" value="'+action+'">'
     +'<input type="hidden" name="id" value="'+id+'">'+inner+'</form>';
 }
+// Format a stored UTC timestamp in the browser's local timezone.
+function fmtTs(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  if(isNaN(d)) return esc(iso);
+  return d.toLocaleString();
+}
+function msgBadge(text){
+  if(!text) return '<span class="dim">—</span>';
+  let cls='b-neutral';
+  if(/ошибк/i.test(text)) cls='b-danger';
+  else if(/актуальн/i.test(text)) cls='b-ok';
+  else if(/запущен|обновл/i.test(text)) cls='b-info';
+  return '<span class="badge '+cls+'">'+esc(text)+'</span>';
+}
 function clientRow(c){
-  const dot='<span class="dot '+(c.online?'on':'off')+'"></span>'+(c.online?'онлайн':'офлайн');
+  const status=c.online
+    ? '<span class="badge b-on"><span class="dot"></span>онлайн</span>'
+    : '<span class="badge b-off"><span class="dot"></span>офлайн</span>';
   let act='';
   if(c.pending_update){
-    act+='<span class="badge">обновление в очереди</span>';
+    act+='<span class="badge b-warn">в очереди</span>';
     act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>');
   }else{
     act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>');
   }
   act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
-  const msg=c.last_message?esc(c.last_message):'<span class="dim">—</span>';
+  const ver=c.version?'<span class="badge b-ver">'+esc(c.version)+'</span>':'<span class="dim">—</span>';
   return '<tr>'
-    +'<td>'+dot+'</td>'
-    +'<td class="mono">'+esc(c.hostname||'—')+'</td>'
+    +'<td>'+status+'</td>'
+    +'<td class="mono trunc" title="'+esc(c.hostname||'')+'">'+esc(c.hostname||'—')+'</td>'
     +'<td class="mono">'+esc(c.local_ip||'—')+'</td>'
-    +'<td>'+esc(c.version||'—')+'</td>'
-    +'<td>'+esc(c.profile||'—')+'</td>'
-    +'<td>'+msg+'</td>'
-    +'<td class="dim">'+esc(c.last_seen||'—')+'</td>'
+    +'<td>'+ver+'</td>'
+    +'<td class="trunc" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</td>'
+    +'<td>'+msgBadge(c.last_message)+'</td>'
+    +'<td class="dim">'+fmtTs(c.last_seen)+'</td>'
     +'<td class="actions">'+act+'</td>'
     +'</tr>';
 }
@@ -217,6 +238,11 @@ async function refreshClients(){
     document.getElementById('refreshTick').textContent='обновлено '+new Date().toLocaleTimeString();
   }catch(e){}
 }
+// Convert server-rendered timestamps (codes table) to local time.
+function localizeStatic(){
+  document.querySelectorAll('.ts[data-ts]').forEach(el=>{ el.textContent=fmtTs(el.dataset.ts); });
+}
+localizeStatic();
 refreshClients();
 setInterval(refreshClients,10000);
 </script>
