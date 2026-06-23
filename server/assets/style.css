@@ -138,8 +138,7 @@ tr.revoked td{opacity:.5}
 .countdown{position:relative;width:36px;height:36px}
 .countdown svg{width:36px;height:36px;transform:rotate(-90deg)}
 .cd-track{fill:none;stroke:var(--line);stroke-width:3}
-.cd-prog{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:0;animation:cdsweep 5s linear infinite}
-@keyframes cdsweep{from{stroke-dashoffset:0}to{stroke-dashoffset:94.25}}
+.cd-prog{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:0;transition:stroke-dashoffset .12s linear}
 .countdown span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent)}
 
 /* ── compact clients table ── */
@@ -152,7 +151,10 @@ tr.revoked td{opacity:.5}
 #pane-clients .pc-ip{font-size:11px}
 #pane-clients .actions{gap:4px}
 #pane-clients .btn-sm{padding:4px 9px;font-size:11.5px;border-radius:7px}
-#pane-clients .btn-sm.danger{padding:4px 8px}
+#pane-clients .col-ver{min-width:120px}   /* keep width stable while status badge changes */
+/* delete-client button: solid like "Обновить" but red, slightly bigger ✕ */
+#pane-clients .btn-sm.del{background:var(--danger);color:#fff;border:none;font-size:15px;font-weight:700;line-height:1;padding:3px 11px}
+#pane-clients .btn-sm.del:hover{filter:brightness(1.1);background:var(--danger)}
 
 /* ── modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}

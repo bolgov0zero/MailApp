@@ -167,7 +167,7 @@ function csrfField($csrf, $action) {
     </div>
     <div class="panel"><div class="table-wrap">
       <table>
-        <thead><tr><th>Статус</th><th>ПК</th><th>Версия</th><th>Профиль</th><th>Контакт</th><th>Действия</th></tr></thead>
+        <thead><tr><th>Статус</th><th>ПК</th><th class="col-ver">Версия</th><th>Профиль</th><th>Контакт</th><th>Действия</th></tr></thead>
         <tbody id="clientsBody"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody>
       </table>
     </div></div>
@@ -356,22 +356,24 @@ function clientRow(c){
   let act='';
   if(c.pending_update){ act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>'); }
   else { act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>'); }
-  act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
+  act+=cForm('delete_client',c.id,'<button class="btn-sm del">✕</button>',"return confirm('Удалить клиента из списка?')");
   const host=c.hostname?esc(c.hostname.toUpperCase()):'—';
   const pc='<div class="pc"><div class="pc-name trunc" title="'+esc((c.hostname||'').toUpperCase())+'">'+host+'</div><div class="pc-ip mono">'+esc(c.local_ip||'—')+'</div></div>';
   const prof=c.profile?('<span title="'+esc(c.profile)+'">'+esc(c.profile)+'</span>'):'<span class="dim">Не настроен</span>';
-  return '<tr><td>'+status+'</td><td>'+pc+'</td><td>'+versionCell(c)+'</td>'
+  return '<tr><td>'+status+'</td><td>'+pc+'</td><td class="col-ver">'+versionCell(c)+'</td>'
     +'<td class="t-prof trunc">'+prof+'</td>'
     +'<td class="dim">'+fmtTs(c.last_seen)+'</td><td><div class="actions">'+act+'</div></td></tr>';
 }
 
-// ── countdown ring ──
-let cd=5;
-function resetCd(){
-  cd=5; const n=document.getElementById('cdNum'); if(n)n.textContent='5';
-  const ring=document.getElementById('cdRing'); if(ring){ ring.style.animation='none'; void ring.offsetWidth; ring.style.animation=''; }
-}
-setInterval(()=>{ cd=cd<=1?5:cd-1; const n=document.getElementById('cdNum'); if(n)n.textContent=cd; },1000);
+// ── countdown ring (driven by real time, synced to the actual refresh) ──
+const CD_TOTAL=5, CD_C=94.25;   // 5s, circumference for r=15
+let cdNext=Date.now()+CD_TOTAL*1000;
+function resetCd(){ cdNext=Date.now()+CD_TOTAL*1000; }
+setInterval(()=>{
+  const rem=Math.max(0,(cdNext-Date.now())/1000);
+  const n=document.getElementById('cdNum'); if(n)n.textContent=Math.max(1,Math.ceil(rem));
+  const ring=document.getElementById('cdRing'); if(ring)ring.style.strokeDashoffset=(CD_C*(1-rem/CD_TOTAL)).toFixed(1);
+},100);
 
 async function refreshClients(){
   try{
