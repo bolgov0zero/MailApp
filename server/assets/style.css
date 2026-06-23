@@ -99,5 +99,50 @@ form{margin:0}
 .hint{color:var(--faint);font-size:12px;margin:14px 2px 0}
 
 /* toast */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card-2);color:var(--ink);border:1px solid var(--line);padding:11px 20px;border-radius:11px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:50;font-weight:500}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card-2);color:var(--ink);border:1px solid var(--line);padding:11px 20px;border-radius:11px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:120;font-weight:500}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── tabs ── */
+.tabs{display:flex;gap:4px;margin:0 auto 0 24px}
+.tab{background:none;border:none;color:var(--muted);font-size:14px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer;transition:.12s}
+.tab:hover{color:var(--ink);background:var(--card-2)}
+.tab.active{color:#fff;background:var(--accent)}
+.tabpane{display:none}
+.tabpane.active{display:block}
+
+/* unified input */
+.inp{padding:11px 14px;border:1.5px solid var(--line);border-radius:10px;outline:none;background:var(--card);color:var(--ink);font-size:14px}
+.inp:focus{border-color:var(--accent)}
+
+/* ghost primary button */
+.btn.ghost{background:var(--card-2);border:1px solid var(--line);color:var(--ink)}
+.btn.ghost:hover{background:var(--card-2);border-color:var(--accent)}
+
+/* labels & rows */
+.card-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:8px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.settings-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fileinfo{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0 16px;min-width:0}
+.warn-line{color:var(--warn);font-size:13px;margin-top:12px}
+
+/* revoked code row */
+tr.revoked td{opacity:.5}
+
+/* ── countdown ring ── */
+.cd-wrap{margin-left:auto;display:flex;align-items:center}
+.countdown{position:relative;width:36px;height:36px}
+.countdown svg{width:36px;height:36px;transform:rotate(-90deg)}
+.cd-track{fill:none;stroke:var(--line);stroke-width:3}
+.cd-prog{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:0;animation:cdsweep 5s linear infinite}
+@keyframes cdsweep{from{stroke-dashoffset:0}to{stroke-dashoffset:94.25}}
+.countdown span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent)}
+
+/* ── modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);font-size:15px}
+.modal-x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:8px}
+.modal-x:hover{background:var(--card-2);color:var(--ink)}
+.modal-body{padding:18px;overflow:auto;word-break:break-all;font-size:13px;color:var(--ink);background:var(--bg-2)}
+.modal-foot{padding:14px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}

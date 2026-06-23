@@ -96,7 +96,7 @@ if ($action === 'heartbeat') {
         if ($u && $u['filename'] !== '') {
             $out['command'] = 'update';
             $out['version'] = $u['version'];
-            $out['url']     = rtrim((string) cfg('server_url'), '/') . '/updates/' . rawurlencode($u['filename']);
+            $out['url']     = server_url() . '/updates/' . rawurlencode($u['filename']);
             $out['sha256']  = $u['sha256'];
         }
         $pdo->prepare('UPDATE clients SET pending_update = 0 WHERE id = ?')->execute([$client['id']]);

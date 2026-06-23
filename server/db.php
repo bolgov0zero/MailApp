@@ -69,5 +69,21 @@ function db() {
     ");
     $pdo->exec("INSERT OR IGNORE INTO app_update (id) VALUES (1)");
 
+    // Key-value app settings (server_url, admin_password_hash) — managed in the
+    // admin panel and stored in the DB (no longer only in config.php).
+    $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (k TEXT PRIMARY KEY, v TEXT DEFAULT '')");
+
+    // History of uploaded update versions.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS update_history (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            version  TEXT DEFAULT '',
+            filename TEXT DEFAULT '',
+            size     INTEGER DEFAULT 0,
+            source   TEXT DEFAULT '',
+            at       TEXT DEFAULT ''
+        )
+    ");
+
     return $pdo;
 }

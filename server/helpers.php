@@ -27,7 +27,7 @@ function code_key() {
 
 /** Encrypt {server_url, pairing token} into an opaque connection code. */
 function make_connect_code($pairToken) {
-    $payload = json_encode(['u' => cfg('server_url'), 't' => $pairToken]);
+    $payload = json_encode(['u' => server_url(), 't' => $pairToken]);
     $iv = random_bytes(16);
     $ct = openssl_encrypt($payload, 'aes-256-cbc', code_key(), OPENSSL_RAW_DATA, $iv);
     return rtrim(strtr(base64_encode($iv . $ct), '+/', '-_'), '=');
@@ -65,10 +65,57 @@ function h($s) {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 }
 
-/** Register a freshly stored installer as the current update. */
-function register_update($pdo, $dir, $safe, $version) {
+// ── App settings stored in the DB ──────────────────────────────────
+function setting_get($key, $default = '') {
+    $st = db()->prepare('SELECT v FROM app_settings WHERE k = ?');
+    $st->execute([$key]);
+    $row = $st->fetch();
+    return ($row && $row['v'] !== '') ? $row['v'] : $default;
+}
+function setting_set($key, $value) {
+    db()->prepare('INSERT INTO app_settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')
+        ->execute([$key, $value]);
+}
+
+/** Server address used in connection codes / update URLs. DB first, config fallback. */
+function server_url() {
+    $v = setting_get('server_url', '');
+    if ($v === '') $v = (string) cfg('server_url');
+    return rtrim($v, '/');
+}
+
+/** Verify the admin password: DB-stored hash if set, otherwise config plaintext. */
+function admin_check_password($pwd) {
+    $hash = setting_get('admin_password_hash', '');
+    if ($hash !== '') return password_verify((string) $pwd, $hash);
+    return hash_equals((string) cfg('admin_password'), (string) $pwd);
+}
+
+/** Register a freshly stored installer as the current update (+ history). */
+function register_update($pdo, $dir, $safe, $version, $source = '') {
+    $size = filesize("$dir/$safe");
     $pdo->prepare('UPDATE app_update SET version=?, filename=?, sha256=?, size=?, uploaded_at=? WHERE id=1')
-        ->execute([$version, $safe, hash_file('sha256', "$dir/$safe"), filesize("$dir/$safe"), now()]);
+        ->execute([$version, $safe, hash_file('sha256', "$dir/$safe"), $size, now()]);
+    $pdo->prepare('INSERT INTO update_history (version, filename, size, source, at) VALUES (?,?,?,?,?)')
+        ->execute([$version, $safe, $size, $source, now()]);
+}
+
+/** Register a .exe that was placed into updates/ manually (e.g. via SFTP). */
+function scan_update_folder($pdo) {
+    $dir = __DIR__ . '/updates';
+    if (!is_dir($dir)) return 'Папка updates не найдена';
+    $files = glob($dir . '/*.exe');
+    if (!$files) return 'В папке updates нет файла .exe';
+    // newest by mtime
+    usort($files, function ($a, $b) { return filemtime($b) - filemtime($a); });
+    $path = $files[0];
+    $safe = basename($path);
+    $version = '';
+    if (preg_match('/(\d+\.\d+\.\d+)/', $safe, $m)) $version = $m[1];
+    if ($version === '') return 'Не удалось определить версию из имени файла ' . $safe;
+    @file_put_contents($dir . '/.htaccess', "Options -Indexes\n");
+    register_update($pdo, $dir, $safe, $version, 'scan');
+    return "Зарегистрирован файл из папки: $version";
 }
 
 function github_get_json($url) {
@@ -127,7 +174,7 @@ function fetch_update_from_github($pdo) {
 
     foreach (glob($dir . '/*.exe') as $old) { @unlink($old); }
     if (!@rename($tmp, "$dir/$safe")) { @unlink($tmp); return 'Не удалось сохранить файл'; }
-    register_update($pdo, $dir, $safe, $version);
+    register_update($pdo, $dir, $safe, $version, 'github');
     return "Загружено с GitHub: $version";
 }
 
@@ -153,8 +200,7 @@ function handle_update_upload($pdo) {
     foreach (glob($dir . '/*.exe') as $old) { @unlink($old); } // keep only the latest
     if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $safe)) return 'Не удалось сохранить файл';
 
-    $pdo->prepare('UPDATE app_update SET version=?, filename=?, sha256=?, size=?, uploaded_at=? WHERE id=1')
-        ->execute([$version, $safe, hash_file('sha256', $dir . '/' . $safe), filesize($dir . '/' . $safe), now()]);
+    register_update($pdo, $dir, $safe, $version, 'upload');
     return "Загружено обновление $version";
 }
 
