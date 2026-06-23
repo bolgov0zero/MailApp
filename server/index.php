@@ -357,9 +357,11 @@ function clientRow(c){
   if(c.pending_update){ act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>'); }
   else { act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>'); }
   act+=cForm('delete_client',c.id,'<button class="btn-sm danger">✕</button>',"return confirm('Удалить клиента из списка?')");
-  const pc='<div class="pc"><div class="pc-name trunc" title="'+esc(c.hostname||'')+'">'+esc(c.hostname||'—')+'</div><div class="pc-ip mono">'+esc(c.local_ip||'—')+'</div></div>';
+  const host=c.hostname?esc(c.hostname.toUpperCase()):'—';
+  const pc='<div class="pc"><div class="pc-name trunc" title="'+esc((c.hostname||'').toUpperCase())+'">'+host+'</div><div class="pc-ip mono">'+esc(c.local_ip||'—')+'</div></div>';
+  const prof=c.profile?('<span title="'+esc(c.profile)+'">'+esc(c.profile)+'</span>'):'<span class="dim">Не настроен</span>';
   return '<tr><td>'+status+'</td><td>'+pc+'</td><td>'+versionCell(c)+'</td>'
-    +'<td class="t-prof trunc" title="'+esc(c.profile||'')+'">'+esc(c.profile||'—')+'</td>'
+    +'<td class="t-prof trunc">'+prof+'</td>'
     +'<td class="dim">'+fmtTs(c.last_seen)+'</td><td><div class="actions">'+act+'</div></td></tr>';
 }
 
