@@ -860,7 +860,7 @@
     const codeInput = document.getElementById('srvCode');
     if (st && st.connected) {
       dot.style.background = '#3bbf6a';
-      txt.textContent = 'Подключён к серверу';
+      txt.textContent = st.url ? ('Подключён: ' + st.url) : 'Подключён к серверу';
       btnC.textContent = 'Переподключить';
       btnD.style.display = '';
       codeInput.placeholder = 'Введите новый код, чтобы сменить сервер';
