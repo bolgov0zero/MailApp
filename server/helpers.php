@@ -113,6 +113,13 @@ function scan_update_folder($pdo) {
     $version = '';
     if (preg_match('/(\d+\.\d+\.\d+)/', $safe, $m)) $version = $m[1];
     if ($version === '') return 'Не удалось определить версию из имени файла ' . $safe;
+
+    // If it's the same file already registered — do nothing (no history spam).
+    $sha = hash_file('sha256', $path);
+    $cur = $pdo->query('SELECT sha256 FROM app_update WHERE id = 1')->fetch();
+    if ($cur && $cur['sha256'] !== '' && strtolower($cur['sha256']) === strtolower($sha)) {
+        return "Файл уже добавлен (версия $version)";
+    }
     @file_put_contents($dir . '/.htaccess', "Options -Indexes\n");
     register_update($pdo, $dir, $safe, $version, 'scan');
     return "Зарегистрирован файл из папки: $version";
