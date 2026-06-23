@@ -137,6 +137,18 @@ tr.revoked td{opacity:.5}
 @keyframes cdsweep{from{stroke-dashoffset:0}to{stroke-dashoffset:94.25}}
 .countdown span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent)}
 
+/* ── compact clients table ── */
+#pane-clients th{padding:8px 10px;font-size:10px}
+#pane-clients td{padding:6px 10px;font-size:12.5px}
+#pane-clients .badge{font-size:11px;padding:2px 8px;gap:5px}
+#pane-clients .badge .dot{width:6px;height:6px}
+#pane-clients .st{gap:3px}
+#pane-clients .pc-name{font-size:12.5px}
+#pane-clients .pc-ip{font-size:11px}
+#pane-clients .actions{gap:4px}
+#pane-clients .btn-sm{padding:4px 9px;font-size:11.5px;border-radius:7px}
+#pane-clients .btn-sm.danger{padding:4px 8px}
+
 /* ── modal ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
 .modal-overlay.show{display:flex}
