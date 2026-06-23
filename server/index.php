@@ -384,7 +384,11 @@ async function refreshClients(){
   resetCd();
 }
 function localizeStatic(){ document.querySelectorAll('.ts[data-ts]').forEach(el=>{ el.textContent=fmtTs(el.dataset.ts); }); }
-(function(){ const fl=document.querySelector('.flash'); if(!fl)return; setTimeout(()=>{ fl.style.transition='opacity .4s'; fl.style.opacity='0'; setTimeout(()=>fl.remove(),400); },3000); })();
+(function(){
+  const fl=document.querySelector('.flash'); if(!fl) return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.add('show'))); // slide/fade in
+  setTimeout(()=>{ fl.classList.remove('show'); setTimeout(()=>fl.remove(),350); },3000); // fade out
+})();
 localizeStatic();
 refreshClients();
 setInterval(refreshClients,5000);
