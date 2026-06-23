@@ -53,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'Клиент удалён';
         } elseif ($action === 'upload_update') {
             $msg = handle_update_upload($pdo);
+        } elseif ($action === 'fetch_github') {
+            $msg = fetch_update_from_github($pdo);
         }
         // PRG: avoid resubmits
         admin_start_session();
@@ -169,14 +171,20 @@ function is_online($lastSeen, $offlineAfter) {
       <?php else: ?>
         <div class="dim" style="margin-bottom:14px">Файл обновления ещё не загружен — клиенты обновляться не будут.</div>
       <?php endif; ?>
+      <form method="post" style="margin-bottom:14px" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Скачивание с GitHub…';">
+        <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+        <input type="hidden" name="action" value="fetch_github">
+        <button class="btn" type="submit">⬇ Загрузить последнюю с GitHub</button>
+      </form>
+      <div style="border-top:1px solid var(--line);margin:0 0 14px"></div>
       <form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
         <input type="hidden" name="action" value="upload_update">
         <input type="file" name="installer" accept=".exe" required style="color:var(--muted)">
         <input type="text" name="version" placeholder="Версия (необязательно)" maxlength="32" style="padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:200px">
-        <button class="btn" type="submit">Загрузить</button>
+        <button class="btn" type="submit">Загрузить вручную</button>
       </form>
-      <p class="hint">Загрузите установщик <code>MailApp-Setup-X.Y.Z.exe</code>. Версия определяется из имени файла (или укажите вручную). Клиенты, подключённые к серверу, обновляются именно с него по HTTPS.</p>
+      <p class="hint">Проще всего — <b>«Загрузить последнюю с GitHub»</b> (сервер сам скачает релиз, без лимитов на размер). Или загрузите <code>MailApp-Setup-X.Y.Z.exe</code> вручную. Клиенты обновляются с этого сервера по HTTPS.</p>
     </div>
   </section>
 
