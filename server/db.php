@@ -56,5 +56,18 @@ function db() {
         )
     ");
 
+    // Single-row registry of the current update installer hosted on this server.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS app_update (
+            id          INTEGER PRIMARY KEY CHECK (id = 1),
+            version     TEXT DEFAULT '',
+            filename    TEXT DEFAULT '',
+            sha256      TEXT DEFAULT '',
+            size        INTEGER DEFAULT 0,
+            uploaded_at TEXT DEFAULT ''
+        )
+    ");
+    $pdo->exec("INSERT OR IGNORE INTO app_update (id) VALUES (1)");
+
     return $pdo;
 }

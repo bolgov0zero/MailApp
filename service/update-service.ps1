@@ -104,30 +104,29 @@ function Compare-Version($a, $b) {
   return 0
 }
 
-function Invoke-Update($srv, $currentVer) {
-  Log "update command received (current $currentVer)"
-  $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-    -Headers @{ 'User-Agent' = 'MailApp-Service'; 'Accept' = 'application/vnd.github+json' } -TimeoutSec 20
-  $latest = ($rel.tag_name -replace '^v', '')
+function Invoke-Update($srv, $currentVer, $info) {
+  # $info comes from the heartbeat command response: { version, url, sha256 }.
+  # The installer is hosted on the management server itself (HTTPS).
+  $latest = "$($info.version)"
+  Log "update command received (current $currentVer, server $latest)"
+  if (-not $info.url) { Log 'no update url from server'; return }
   if (-not $latest -or (Compare-Version $latest $currentVer) -le 0) {
-    Log "already up to date (latest $latest)"
+    Log "already up to date (server $latest)"
     try { Send-Heartbeat $srv $currentVer 'up_to_date' | Out-Null } catch {}
     return
   }
-  $asset = $rel.assets | Where-Object { $_.name -match '\.exe$' -and $_.name -notmatch 'blockmap' } | Select-Object -First 1
-  if (-not $asset) { Log 'no .exe asset'; return }
 
   # Remember whether the GUI was running — only relaunch it afterwards if so.
   $wasRunning = [bool](Get-Process -Name 'MailApp' -ErrorAction SilentlyContinue)
   Log "app running before update: $wasRunning"
 
-  $installer = Join-Path $env:TEMP $asset.name
+  $installer = Join-Path $env:TEMP "MailApp-Setup-$latest.exe"
   try { Send-Heartbeat $srv $currentVer 'downloading' | Out-Null } catch {}
-  Log "downloading $($asset.browser_download_url)"
+  Log "downloading $($info.url)"
   $downloaded = $false
   for ($i = 1; $i -le 3 -and -not $downloaded; $i++) {
     try {
-      Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $installer -UseBasicParsing -TimeoutSec 1800
+      Invoke-WebRequest -Uri $info.url -OutFile $installer -UseBasicParsing -TimeoutSec 1800
       $downloaded = $true
     } catch {
       Log "download attempt $i failed: $($_.Exception.Message)"
@@ -140,6 +139,17 @@ function Invoke-Update($srv, $currentVer) {
     return
   }
   Log "downloaded to $installer"
+
+  # Verify integrity against the sha256 reported by the server.
+  if ($info.sha256) {
+    $h = (Get-FileHash -Algorithm SHA256 -Path $installer).Hash
+    if ($h -ne ("$($info.sha256)").ToUpper()) {
+      Log "sha256 mismatch (got $h, expected $($info.sha256))"
+      try { Send-Heartbeat $srv $currentVer 'error' | Out-Null } catch {}
+      return
+    }
+    Log 'sha256 ok'
+  }
 
   # Silent install. The installer's NSIS skips the service on /S, so this
   # running service is NOT touched/locked — no self-stop, no restart needed.
@@ -233,7 +243,7 @@ while ($true) {
       $ver = Get-AppVersion $exe
       $resp = Send-Heartbeat $srv $ver $null
       if ($resp -and $resp.command -eq 'update') {
-        Invoke-Update $srv $ver
+        Invoke-Update $srv $ver $resp
       }
     }
   } catch {

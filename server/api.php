@@ -88,12 +88,20 @@ if ($action === 'heartbeat') {
     }
 
     // The update is performed by the service, so deliver the command only to it.
-    $command = null;
+    // The installer is hosted on THIS server (HTTPS), so the command carries the
+    // download URL + version + sha256 for integrity verification.
+    $out = ['ok' => true, 'command' => null];
     if ($source === 'service' && !empty($client['pending_update'])) {
-        $command = 'update';
+        $u = $pdo->query('SELECT * FROM app_update WHERE id = 1')->fetch();
+        if ($u && $u['filename'] !== '') {
+            $out['command'] = 'update';
+            $out['version'] = $u['version'];
+            $out['url']     = rtrim((string) cfg('server_url'), '/') . '/updates/' . rawurlencode($u['filename']);
+            $out['sha256']  = $u['sha256'];
+        }
         $pdo->prepare('UPDATE clients SET pending_update = 0 WHERE id = ?')->execute([$client['id']]);
     }
-    json_out(['ok' => true, 'command' => $command]);
+    json_out($out);
 }
 
 json_out(['ok' => false, 'error' => 'bad_action'], 400);

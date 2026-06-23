@@ -11,6 +11,7 @@ Thumbs.db
 service/MailAppService.exe
 
 server/config.php
+server/updates/
 server/mailapp.db
 server/mailapp.db-wal
 server/mailapp.db-shm

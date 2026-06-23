@@ -65,6 +65,33 @@ function h($s) {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 }
 
+/** Store an uploaded installer (.exe) as the current update and record its meta. */
+function handle_update_upload($pdo) {
+    if (empty($_FILES['installer']) || ($_FILES['installer']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $code = $_FILES['installer']['error'] ?? 'нет файла';
+        return "Ошибка загрузки (код $code). Проверьте upload_max_filesize / post_max_size на хостинге.";
+    }
+    $f = $_FILES['installer'];
+    $name = basename($f['name']);
+    if (!preg_match('/\.exe$/i', $name)) return 'Нужен файл .exe';
+
+    $version = clean_str($_POST['version'] ?? '', 32);
+    if ($version === '' && preg_match('/(\d+\.\d+\.\d+(?:\.\d+)?)/', $name, $m)) $version = $m[1];
+    if ($version === '') return 'Не удалось определить версию из имени файла — укажите её вручную';
+
+    $dir = __DIR__ . '/updates';
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true)) return 'Не удалось создать папку updates (права на запись?)';
+    @file_put_contents($dir . '/.htaccess', "Options -Indexes\n");
+
+    $safe = preg_replace('/[^A-Za-z0-9._-]/', '_', $name);
+    foreach (glob($dir . '/*.exe') as $old) { @unlink($old); } // keep only the latest
+    if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $safe)) return 'Не удалось сохранить файл';
+
+    $pdo->prepare('UPDATE app_update SET version=?, filename=?, sha256=?, size=?, uploaded_at=? WHERE id=1')
+        ->execute([$version, $safe, hash_file('sha256', $dir . '/' . $safe), filesize($dir . '/' . $safe), now()]);
+    return "Загружено обновление $version";
+}
+
 // ── Admin session auth ─────────────────────────────────────────────
 function admin_start_session() {
     if (session_status() !== PHP_SESSION_ACTIVE) {

@@ -51,6 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete_client') {
             $pdo->prepare('DELETE FROM clients WHERE id = ?')->execute([(int) ($_POST['id'] ?? 0)]);
             $msg = 'Клиент удалён';
+        } elseif ($action === 'upload_update') {
+            $msg = handle_update_upload($pdo);
         }
         // PRG: avoid resubmits
         admin_start_session();
@@ -116,6 +118,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'clients') {
 $offlineAfter = (int) cfg('offline_after');
 $clients = $pdo->query('SELECT * FROM clients ORDER BY hostname COLLATE NOCASE ASC, id ASC')->fetchAll();
 $codes   = $pdo->query('SELECT * FROM connect_codes ORDER BY id DESC')->fetchAll();
+$update  = $pdo->query('SELECT * FROM app_update WHERE id = 1')->fetch();
 $csrf = csrf_token();
 
 function is_online($lastSeen, $offlineAfter) {
@@ -151,6 +154,30 @@ function is_online($lastSeen, $offlineAfter) {
         <tbody id="clientsBody"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody>
       </table>
     </div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2>Файл обновления</h2></div>
+    <div class="panel" style="padding:18px">
+      <?php if ($update && $update['filename']): ?>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <span class="badge b-ver">v<?= h($update['version']) ?></span>
+          <span class="mono dim"><?= h($update['filename']) ?></span>
+          <span class="dim"><?= number_format($update['size'] / 1048576, 1) ?> МБ</span>
+          <span class="dim ts" data-ts="<?= h($update['uploaded_at']) ?>"><?= h($update['uploaded_at']) ?></span>
+        </div>
+      <?php else: ?>
+        <div class="dim" style="margin-bottom:14px">Файл обновления ещё не загружен — клиенты обновляться не будут.</div>
+      <?php endif; ?>
+      <form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="hidden" name="csrf" value="<?= h($csrf) ?>">
+        <input type="hidden" name="action" value="upload_update">
+        <input type="file" name="installer" accept=".exe" required style="color:var(--muted)">
+        <input type="text" name="version" placeholder="Версия (необязательно)" maxlength="32" style="padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:200px">
+        <button class="btn" type="submit">Загрузить</button>
+      </form>
+      <p class="hint">Загрузите установщик <code>MailApp-Setup-X.Y.Z.exe</code>. Версия определяется из имени файла (или укажите вручную). Клиенты, подключённые к серверу, обновляются именно с него по HTTPS.</p>
+    </div>
   </section>
 
   <section class="section">
