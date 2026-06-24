@@ -5,9 +5,11 @@
 ; service — OUTSIDE the app folder. So an app update never locks the service:
 ; it keeps running and orchestrates the install without restarting itself.
 ;
-; - Interactive (manual exe) install: (re)install/refresh the service.
-; - Silent install (server/service-driven app update, run with /S): DO NOT touch
-;   the service at all — only the app files are replaced.
+; - Interactive (manual exe) install: (re)install/refresh the whole service.
+; - Silent install (server/service-driven app update, run with /S): do NOT
+;   stop/reinstall the service, but DO refresh only update-service.ps1 — the
+;   running service notices the file-hash change and self-restarts (~10 min),
+;   so script fixes ride along with app updates without a manual restart.
 
 !define SVC_DIR "C:\ProgramData\MailApp\service"
 
@@ -41,14 +43,23 @@
   nsExec::Exec 'icacls "C:\ProgramData\MailApp" /grant "*S-1-5-32-545:(OI)(CI)M" /grant "*S-1-5-11:(OI)(CI)M" /T'
 
   nsExec::Exec 'schtasks /delete /tn "MailAppUpdater" /f'   ; remove legacy scheduled task
-  ; Silent install = server/service-driven app update → never touch the service.
-  IfSilent mailapp_ci_end
+  IfSilent mailapp_ci_silent
+    ; ── Interactive (manual) install: (re)install the whole service ──
     nsExec::Exec 'sc query MailAppUpdater'
     Pop $0
     StrCmp $0 "0" mailapp_ci_do 0
     MessageBox MB_YESNO|MB_ICONQUESTION "Установить службу обновления MailApp?$\n$\nОна позволяет обновлять приложение без запроса прав администратора." IDNO mailapp_ci_end
     mailapp_ci_do:
       !insertmacro installService
+    Goto mailapp_ci_end
+  mailapp_ci_silent:
+    ; ── Silent (server update): refresh ONLY the script, no stop/restart ──
+    ; The running service detects the new file by hash and self-restarts.
+    nsExec::Exec 'sc query MailAppUpdater'
+    Pop $0
+    StrCmp $0 "0" 0 mailapp_ci_end                 ; service not installed → skip
+    IfFileExists "${SVC_DIR}\update-service.ps1" 0 mailapp_ci_end
+    CopyFiles /SILENT "$INSTDIR\resources\service\update-service.ps1" "${SVC_DIR}\update-service.ps1"
   mailapp_ci_end:
 !macroend
 

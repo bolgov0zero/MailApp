@@ -20,7 +20,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 # Bump this when you change update-service.ps1. Shown in the admin and used to
 # see which machines already picked up the new script.
-$ScriptVersion = '1'
+$ScriptVersion = '2'
 
 $Repo       = 'bolgov0zero/MailApp'
 $DataDir    = 'C:\ProgramData\MailApp'
