@@ -63,7 +63,7 @@ if ($action === 'heartbeat') {
     $version  = clean_str($in['version'] ?? '', 32);
     $profile  = clean_str($in['profile'] ?? '');
     if ($source === 'service') {
-        $scriptVer = clean_str($in['script_version'] ?? '', 16);
+        $scriptVer = clean_str((string) ($in['script_version'] ?? ''), 16);
         $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, service_version=?, service_script_version=?, service_last_seen=?, last_seen=? WHERE id=?')
             ->execute([$hostname, $ip, $version, $scriptVer, now(), now(), $client['id']]);
     } else {
