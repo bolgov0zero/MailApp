@@ -292,7 +292,26 @@ function csrfField($csrf, $action) {
 
 <script>
 const CSRF = <?= json_encode($csrf) ?>;
+const SRV_VER = <?= json_encode($update && $update['version'] ? $update['version'] : '') ?>;
 function esc(s){ const d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+
+// Compare a client version to the version uploaded on the server.
+// eq → up to date (green), one → behind by one patch (orange), far → further behind (red).
+function verState(client){
+  if(!SRV_VER || !client) return 'plain';
+  const a=String(client).split('.').map(n=>parseInt(n,10)||0);
+  const b=String(SRV_VER).split('.').map(n=>parseInt(n,10)||0);
+  for(let i=0;i<3;i++){ a[i]=a[i]||0; b[i]=b[i]||0; }
+  if(a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2]) return 'eq';
+  const clientNewer = a[0]>b[0] || (a[0]===b[0]&&a[1]>b[1]) || (a[0]===b[0]&&a[1]===b[1]&&a[2]>b[2]);
+  if(clientNewer) return 'eq';
+  if(a[0]===b[0] && a[1]===b[1] && (b[2]-a[2])===1) return 'one';
+  return 'far';
+}
+function verBadge(ver){
+  const cls={eq:'b-ok',one:'b-warn',far:'b-danger',plain:'b-ver'}[verState(ver)];
+  return '<span class="badge '+cls+'">'+esc(ver)+'</span>';
+}
 
 // ── tabs ──
 function switchTab(name){
@@ -349,7 +368,7 @@ function versionCell(c){
   if(/ошибк/i.test(msg) && elapsed<120) return msgBadge(msg);
   if(/загрузк|обновл|запуск/i.test(msg) && elapsed<300) return msgBadge(msg);
   if(/актуальн/i.test(msg) && elapsed<20) return msgBadge(msg);
-  return c.service_version?'<span class="badge b-ver">'+esc(c.service_version)+'</span>':'<span class="dim">—</span>';
+  return c.service_version?verBadge(c.service_version):'<span class="dim">—</span>';
 }
 function clientRow(c){
   const status='<div class="st">'+stBadge('Служба',c.service_online)+stBadge('Приложение',c.app_online)+'</div>';
