@@ -67,6 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strlen($p) < 4) { $msg = 'Пароль слишком короткий'; }
             else { setting_set('admin_password_hash', password_hash($p, PASSWORD_DEFAULT)); $msg = 'Пароль администратора изменён'; }
         }
+        // AJAX actions (client buttons): return JSON, no page reload/redirect.
+        if (($_POST['ajax'] ?? '') === '1') {
+            json_out(['ok' => true, 'msg' => $msg]);
+        }
         $tabMap = [
             'create_code' => 'codes', 'regen_code' => 'codes', 'revoke_code' => 'codes',
             'restore_code' => 'codes', 'delete_code' => 'codes',
@@ -351,6 +355,17 @@ function cForm(action,id,inner,confirmJs){
     +'<input type="hidden" name="action" value="'+action+'">'
     +'<input type="hidden" name="id" value="'+id+'">'+inner+'</form>';
 }
+// Per-client action without page reload (keeps scroll position).
+async function postAction(action,id,confirmMsg){
+  if(confirmMsg && !confirm(confirmMsg)) return;
+  try{
+    const body=new URLSearchParams({csrf:CSRF,action:action,id:String(id),ajax:'1'});
+    const r=await fetch('index.php',{method:'POST',body});
+    const j=await r.json().catch(()=>({ok:false}));
+    if(j.ok){ if(j.msg)toast(j.msg); refreshClients(); }
+    else { toast('Ошибка'); }
+  }catch(e){ toast('Ошибка сети'); }
+}
 function fmtTs(iso){ if(!iso) return '—'; const d=new Date(iso); return isNaN(d)?esc(iso):d.toLocaleString(); }
 function msgBadge(text){
   if(!text) return '<span class="dim">—</span>';
@@ -373,9 +388,9 @@ function versionCell(c){
 function clientRow(c){
   const status='<div class="st">'+stBadge('Служба',c.service_online)+stBadge('Приложение',c.app_online)+'</div>';
   let act='';
-  if(c.pending_update){ act+=cForm('cancel_update',c.id,'<button class="btn-sm ghost">Отменить</button>'); }
-  else { act+=cForm('update_client',c.id,'<button class="btn-sm">Обновить</button>'); }
-  act+=cForm('delete_client',c.id,'<button class="btn-sm del">✕</button>',"return confirm('Удалить клиента из списка?')");
+  if(c.pending_update){ act+='<button class="btn-sm ghost" onclick="postAction(\'cancel_update\','+c.id+')">Отменить</button>'; }
+  else { act+='<button class="btn-sm" onclick="postAction(\'update_client\','+c.id+')">Обновить</button>'; }
+  act+='<button class="btn-sm del" onclick="postAction(\'delete_client\','+c.id+',\'Удалить клиента из списка?\')">✕</button>';
   const host=c.hostname?esc(c.hostname.toUpperCase()):'—';
   const pc='<div class="pc"><div class="pc-name trunc" title="'+esc((c.hostname||'').toUpperCase())+'">'+host+'</div><div class="pc-ip mono">'+esc(c.local_ip||'—')+'</div></div>';
   const prof=c.profile?('<span title="'+esc(c.profile)+'">'+esc(c.profile)+'</span>'):'<span class="dim">Не настроен</span>';
