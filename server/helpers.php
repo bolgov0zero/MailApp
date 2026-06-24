@@ -156,6 +156,12 @@ function fetch_update_from_github($pdo) {
     if (!$asset) return 'В последнем релизе GitHub нет файла .exe';
     if ($version === '' && preg_match('/(\d+\.\d+\.\d+)/', $asset['name'], $m)) $version = $m[1];
 
+    // Already have this version — don't re-download or touch history.
+    $cur = $pdo->query('SELECT version FROM app_update WHERE id = 1')->fetch();
+    if ($cur && $cur['version'] !== '' && $cur['version'] === $version) {
+        return "Последняя версия ($version) уже загружена";
+    }
+
     $dir = __DIR__ . '/updates';
     if (!is_dir($dir) && !@mkdir($dir, 0775, true)) return 'Не удалось создать папку updates (права на запись?)';
     @file_put_contents($dir . '/.htaccess', "Options -Indexes\n");
