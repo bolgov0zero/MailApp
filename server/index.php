@@ -118,6 +118,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'clients') {
             'service_online' => $fresh($c['service_last_seen']),
             'hostname' => $c['hostname'], 'local_ip' => $c['local_ip'],
             'app_version' => $c['app_version'], 'service_version' => $c['service_version'],
+            'script_version' => $c['service_script_version'],
             'profile' => $c['profile'], 'last_seen' => $c['last_seen'],
             'pending_update' => (int) $c['pending_update'],
             'last_message' => $c['last_message'], 'last_message_at' => $c['last_message_at'],
@@ -394,7 +395,8 @@ function clientRow(c){
   const host=c.hostname?esc(c.hostname.toUpperCase()):'—';
   const pc='<div class="pc"><div class="pc-name trunc" title="'+esc((c.hostname||'').toUpperCase())+'">'+host+'</div><div class="pc-ip mono">'+esc(c.local_ip||'—')+'</div></div>';
   const prof=c.profile?('<span title="'+esc(c.profile)+'">'+esc(c.profile)+'</span>'):'<span class="dim">Не настроен</span>';
-  return '<tr><td>'+status+'</td><td>'+pc+'</td><td class="col-ver">'+versionCell(c)+'</td>'
+  const svcLine=c.script_version?'<div class="ver-svc">служба v'+esc(c.script_version)+'</div>':'';
+  return '<tr><td>'+status+'</td><td>'+pc+'</td><td class="col-ver">'+svcLine+'<div>'+versionCell(c)+'</div></td>'
     +'<td class="t-prof trunc">'+prof+'</td>'
     +'<td class="dim">'+fmtTs(c.last_seen)+'</td><td><div class="actions">'+act+'</div></td></tr>';
 }

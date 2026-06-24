@@ -63,8 +63,9 @@ if ($action === 'heartbeat') {
     $version  = clean_str($in['version'] ?? '', 32);
     $profile  = clean_str($in['profile'] ?? '');
     if ($source === 'service') {
-        $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, service_version=?, service_last_seen=?, last_seen=? WHERE id=?')
-            ->execute([$hostname, $ip, $version, now(), now(), $client['id']]);
+        $scriptVer = clean_str($in['script_version'] ?? '', 16);
+        $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, service_version=?, service_script_version=?, service_last_seen=?, last_seen=? WHERE id=?')
+            ->execute([$hostname, $ip, $version, $scriptVer, now(), now(), $client['id']]);
     } else {
         // The app knows the profile; keep it authoritative from the app.
         $pdo->prepare('UPDATE clients SET hostname=?, local_ip=?, profile=?, app_version=?, app_last_seen=?, last_seen=? WHERE id=?')

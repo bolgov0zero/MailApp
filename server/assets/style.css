@@ -152,6 +152,7 @@ tr.revoked td{opacity:.5}
 #pane-clients .actions{gap:4px}
 #pane-clients .btn-sm{padding:4px 9px;font-size:11.5px;border-radius:7px}
 #pane-clients .col-ver{min-width:120px}   /* keep width stable while status badge changes */
+#pane-clients .ver-svc{font-size:10.5px;color:var(--muted);margin-bottom:3px}
 /* delete-client button: solid like "Обновить" but red, slightly bigger ✕ */
 #pane-clients .btn-sm.del{background:var(--danger);color:#fff;border:none;font-size:15px;font-weight:700;line-height:1;padding:3px 11px}
 #pane-clients .btn-sm.del:hover{filter:brightness(1.1);background:var(--danger)}

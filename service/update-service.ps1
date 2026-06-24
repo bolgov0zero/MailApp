@@ -18,6 +18,10 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+# Bump this when you change update-service.ps1. Shown in the admin and used to
+# see which machines already picked up the new script.
+$ScriptVersion = 1
+
 $Repo       = 'bolgov0zero/MailApp'
 $DataDir    = 'C:\ProgramData\MailApp'
 $SettingsFp = Join-Path $DataDir 'settings.json'
@@ -25,6 +29,7 @@ $LogFp      = Join-Path $DataDir 'service.log'
 $SvcDir     = $PSScriptRoot
 $AppPathFp  = Join-Path $SvcDir 'app.txt'   # written by the installer: full path to MailApp.exe
 $HeartbeatSec = 5
+$SelfCheckSec = 600                         # re-check own script for changes every 10 min
 
 function Log($msg) {
   try {
@@ -78,13 +83,14 @@ function Read-Server {
 
 function Send-Heartbeat($srv, $version, [string]$report) {
   $body = @{
-    action       = 'heartbeat'
-    device_token = $srv.token
-    source       = 'service'
-    hostname     = $env:COMPUTERNAME
-    local_ip     = (Get-LocalIp)
-    version      = $version
-    profile      = $srv.profile
+    action         = 'heartbeat'
+    device_token   = $srv.token
+    source         = 'service'
+    hostname       = $env:COMPUTERNAME
+    local_ip       = (Get-LocalIp)
+    version        = $version
+    profile        = $srv.profile
+    script_version = $ScriptVersion
   }
   if ($report) { $body.report = $report }
   return Invoke-RestMethod -Uri ($srv.url + '/api.php') -Method Post -TimeoutSec 15 `
@@ -234,7 +240,9 @@ function Relaunch-App {
 }
 
 # ── main loop ──────────────────────────────────────────────────────
-Log 'service started'
+Log "service started (script v$ScriptVersion)"
+$selfHash = try { (Get-FileHash -Algorithm SHA256 -Path $PSCommandPath).Hash } catch { '' }
+$lastSelfCheck = Get-Date
 while ($true) {
   try {
     $srv = Read-Server
@@ -244,6 +252,16 @@ while ($true) {
       $resp = Send-Heartbeat $srv $ver $null
       if ($resp -and $resp.command -eq 'update') {
         Invoke-Update $srv $ver $resp
+      }
+    }
+    # Self-update: if this script file changed on disk, restart to apply it
+    # (WinSW onfailure=restart relaunches powershell with the new script).
+    if (((Get-Date) - $lastSelfCheck).TotalSeconds -ge $SelfCheckSec) {
+      $lastSelfCheck = Get-Date
+      $h = try { (Get-FileHash -Algorithm SHA256 -Path $PSCommandPath).Hash } catch { '' }
+      if ($selfHash -and $h -and $h -ne $selfHash) {
+        Log 'script changed on disk — restarting to apply'
+        exit 1
       }
     }
   } catch {

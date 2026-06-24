@@ -41,6 +41,7 @@ function db() {
         'last_message TEXT', 'last_message_at TEXT',
         'app_version TEXT', 'app_last_seen TEXT',
         'service_version TEXT', 'service_last_seen TEXT',
+        'service_script_version TEXT',
     ];
     foreach ($cols as $col) {
         try { $pdo->exec("ALTER TABLE clients ADD COLUMN $col DEFAULT ''"); } catch (Exception $e) {}
